@@ -111,3 +111,7 @@ This project is in early development.
 - [ ] Authentication
 - [ ] Automated tests
 - [ ] Docker setup
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
