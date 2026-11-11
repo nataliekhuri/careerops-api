@@ -2,21 +2,34 @@
 
 A REST API for tracking job applications, built with FastAPI.
 
-> **Note:** The current version stores data in **temporary in-memory storage** (a Python list).
-> All data is lost whenever the server restarts. Persistent storage with PostgreSQL is planned.
+Data is stored in **PostgreSQL**, so applications persist across server restarts.
 
 ## Tech Stack
 
-**Current**
-
 - [FastAPI](https://fastapi.tiangolo.com/) — web framework
 - [Pydantic](https://docs.pydantic.dev/) — request validation
+- [SQLAlchemy 2](https://www.sqlalchemy.org/) — database access (ORM)
+- [PostgreSQL](https://www.postgresql.org/) via [psycopg 3](https://www.psycopg.org/) — persistent storage
+- [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) — configuration from `.env`
 - [Uvicorn](https://www.uvicorn.org/) — ASGI server
 - Python 3.13
 
-**Planned**
+## Project Structure
 
-- PostgreSQL — persistent database
+```
+app/
+├── main.py                  # creates the FastAPI app and includes routes
+├── core/config.py           # settings loaded from .env
+├── db/
+│   ├── base.py              # SQLAlchemy base class
+│   └── session.py           # database engine and per-request session
+├── models/application.py    # "applications" database table
+├── schemas/application.py   # request/response models
+├── crud/application.py      # database read/write functions
+└── api/routes/
+    ├── health.py            # / and /health
+    └── applications.py      # /applications CRUD endpoints
+```
 
 ## Features
 
@@ -81,15 +94,44 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 3. Run the server
+### 3. Set up PostgreSQL
 
-```bash
-uvicorn main:app --reload
+Create a dedicated database user and database (run as a PostgreSQL superuser, e.g. with `psql`):
+
+```sql
+CREATE ROLE careerops_user WITH LOGIN;
+\password careerops_user
+CREATE DATABASE careerops OWNER careerops_user;
 ```
 
+### 4. Configure environment variables
+
+Copy the example file and fill in your database password:
+
+```bash
+cp .env.example .env
+```
+
+| Variable      | Default          | Description            |
+|---------------|------------------|------------------------|
+| `DB_HOST`     | `localhost`      | PostgreSQL host        |
+| `DB_PORT`     | `5433`           | PostgreSQL port        |
+| `DB_NAME`     | `careerops`      | Database name          |
+| `DB_USER`     | `careerops_user` | Database user          |
+| `DB_PASSWORD` | —                | Database password (required) |
+
+`.env` is listed in `.gitignore` and must never be committed.
+
+### 5. Run the server
+
+```bash
+uvicorn app.main:app --reload
+```
+
+The `applications` table is created automatically on first start.
 The API runs at `http://127.0.0.1:8000`.
 
-### 4. Explore the API
+### 6. Explore the API
 
 - Interactive docs (Swagger UI): `http://127.0.0.1:8000/docs`
 - Alternative docs (ReDoc): `http://127.0.0.1:8000/redoc`
@@ -103,11 +145,12 @@ This project is in early development.
 - [x] CRUD endpoints for job applications
 - [x] Request validation with Pydantic
 - [x] Health check endpoint
-- [x] Temporary in-memory storage
+- [x] PostgreSQL database for persistent storage
+- [x] Configuration via environment variables (`.env`)
 
 **Planned (not yet implemented)**
 
-- [ ] PostgreSQL database for persistent storage
+- [ ] Database migrations with Alembic
 - [ ] Authentication
 - [ ] Automated tests
 - [ ] Docker setup
