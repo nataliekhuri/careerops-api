@@ -2,12 +2,14 @@ from datetime import datetime
 from enum import StrEnum
 from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
 
 if TYPE_CHECKING:
+    from app.models.company import Company
+    from app.models.interview import Interview
     from app.models.user import User
 
 
@@ -35,12 +37,16 @@ class Application(Base):
             "status IN (" + ", ".join(f"'{v}'" for v in STATUS_VALUES) + ")",
             name="status",
         ),
+        # Lets interviews reference (id, user_id) so their owner must match.
+        UniqueConstraint("id", "user_id"),
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     # Owner. Deleting a user deletes their applications.
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     company: Mapped[str] = mapped_column(String(255))
+    # Optional link to a saved company. Deleting the company keeps the application.
+    company_id: Mapped[int | None] = mapped_column(ForeignKey("companies.id", ondelete="SET NULL"), index=True)
     position: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(
         String(50),
@@ -58,3 +64,7 @@ class Application(Base):
     )
 
     user: Mapped["User"] = relationship(back_populates="applications")
+    company_ref: Mapped["Company | None"] = relationship(back_populates="applications")
+    interviews: Mapped[list["Interview"]] = relationship(
+        back_populates="application", cascade="all, delete-orphan", passive_deletes=True
+    )

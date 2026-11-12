@@ -46,6 +46,7 @@ class JobApplication(BaseModel):
     status: Status = Field(default=ApplicationStatus.APPLIED, description="Current stage of the application")
     location: RequiredText = Field(description="City, country or 'Remote'")
     notes: NotesText = Field(default="", description="Free-form notes")
+    company_id: int | None = Field(default=None, gt=0, description="Optional link to one of your saved companies")
 
 
 class ApplicationUpdate(BaseModel):
@@ -58,10 +59,12 @@ class ApplicationUpdate(BaseModel):
     status: Status | None = None
     location: RequiredText | None = None
     notes: NotesText | None = None
+    company_id: int | None = Field(default=None, gt=0, description="Send null to unlink the company")
 
     @model_validator(mode="after")
     def reject_explicit_nulls(self) -> "ApplicationUpdate":
-        nulls = [name for name in self.model_fields_set if getattr(self, name) is None]
+        # company_id may be null (unlink); every other field must have a value.
+        nulls = [name for name in self.model_fields_set if getattr(self, name) is None and name != "company_id"]
         if nulls:
             raise ValueError(f"Fields cannot be null: {', '.join(sorted(nulls))}")
         return self
@@ -78,6 +81,7 @@ class ApplicationRead(BaseModel):
     status: ApplicationStatus
     location: str
     notes: str
+    company_id: int | None
     created_at: datetime
     updated_at: datetime
 
@@ -114,6 +118,7 @@ class ApplicationFilters(BaseModel):
     location: str | None = Field(
         default=None, max_length=NAME_MAX_LENGTH, description="Location contains (case-insensitive)"
     )
+    company_id: int | None = Field(default=None, gt=0, description="Only applications linked to this company")
     sort: SortField = Field(default=SortField.CREATED_AT, description="Sort order; prefix with '-' for descending")
     limit: int = Field(default=50, ge=1, le=100, description="Maximum number of results (1-100)")
     offset: int = Field(default=0, ge=0, description="Number of results to skip")
