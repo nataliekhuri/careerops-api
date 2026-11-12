@@ -10,6 +10,10 @@ def create(client, **fields):
     return response.json()["application"]
 
 
+def without_timestamps(application: dict) -> dict:
+    return {k: v for k, v in application.items() if k not in ("created_at", "updated_at")}
+
+
 # ----------------------------------------------------------------- create
 
 
@@ -20,7 +24,7 @@ def test_create_returns_message_and_application(client, payload):
     body = response.json()
     assert body["message"] == "Application created successfully"
     assert isinstance(body["application"]["id"], int)
-    assert body["application"] == {"id": body["application"]["id"], **payload}
+    assert without_timestamps(body["application"]) == {"id": body["application"]["id"], **payload}
 
 
 def test_create_applies_defaults(client):
@@ -88,7 +92,7 @@ def test_update_replaces_all_fields(client, payload):
     response = client.put(f"/applications/{application['id']}", json=changes)
 
     assert response.status_code == 200
-    assert response.json() == {"id": application["id"], **changes}
+    assert without_timestamps(response.json()) == {"id": application["id"], **changes}
     assert client.get(f"/applications/{application['id']}").json()["status"] == "Interview"
 
 
@@ -154,7 +158,8 @@ def test_text_longer_than_column_limit_returns_422_not_500(client, payload, fiel
     assert response.status_code == 422
 
 
-@pytest.mark.parametrize(("field", "limit"), [("company", 255), ("position", 255), ("location", 255), ("status", 50)])
+# status is limited to a fixed set of values (see test_application_workflow.py), not just a length.
+@pytest.mark.parametrize(("field", "limit"), [("company", 255), ("position", 255), ("location", 255)])
 def test_text_at_column_limit_is_accepted(client, payload, field, limit):
     application = create(client, **{**payload, field: "x" * limit})
 
