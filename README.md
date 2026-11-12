@@ -25,7 +25,7 @@ Data is stored in **PostgreSQL**, so applications persist across server restarts
 ```
 app/
 ├── main.py                  # creates the FastAPI app, error handlers and routes
-├── core/config.py           # settings loaded from .env
+├── core/config.py           # settings from .env / environment (DB_* or DATABASE_URL)
 ├── db/
 │   ├── base.py              # SQLAlchemy base class
 │   └── session.py           # database engine and per-request session
@@ -39,7 +39,7 @@ app/
         ├── health.py        # /, /health (liveness), /health/ready (readiness)
         └── applications.py  # /applications CRUD endpoints
 alembic/
-├── env.py                   # migration environment (reads DB settings from .env)
+├── env.py                   # migration environment (app settings + migration lock)
 └── versions/                # migration scripts
 tests/
 ├── conftest.py              # fixtures: isolated test schema, rollback per test
@@ -47,10 +47,14 @@ tests/
 ├── test_application_workflow.py  # statuses, timestamps, PATCH, filters, pagination
 ├── test_health.py
 ├── test_reliability.py      # readiness, database outages, unexpected errors
-└── test_migrations.py       # migrations match the models, handle data, are reversible
+├── test_migrations.py       # migrations match the models, handle data, are reversible
+├── test_config.py           # DB_* and DATABASE_URL settings
+└── test_deploy_config.py    # render.yaml sanity checks
+scripts/start.sh             # container start: optional migrations, then the API
 Dockerfile                   # production image (non-root, honours $PORT)
 docker-compose.yml           # db + migrate + api for local use
 .github/workflows/ci.yml     # lint, tests on PostgreSQL 18, Docker build + smoke test
+render.yaml                  # Render Blueprint (free web service + free PostgreSQL)
 ```
 
 ## Features
@@ -197,6 +201,8 @@ cp .env.example .env
 | `DB_USER`     | `careerops_user` | Database user          |
 | `DB_PASSWORD` | —                | Database password (required) |
 | `DB_CONNECT_TIMEOUT` | `5`       | Seconds to wait for a database connection |
+| `DATABASE_URL` | —               | Full PostgreSQL URL; if set, it replaces the `DB_*` values (used on Render) |
+| `RUN_MIGRATIONS` | `false`       | Container only: run `alembic upgrade head` before starting the API |
 
 `.env` is listed in `.gitignore` and must never be committed.
 
@@ -266,6 +272,49 @@ alembic upgrade head
 
 CI fails if the models and migrations get out of sync (`alembic check`).
 
+Migrations take a PostgreSQL advisory lock, so if several instances start at once
+only one applies migrations; the others wait and then find nothing to do.
+
+## Deployment (Render)
+
+The repository includes a [Render Blueprint](https://render.com/docs/blueprint-spec)
+(`render.yaml`) that creates:
+
+- **careerops-api**: a free Docker web service in Frankfurt, built from the `Dockerfile`.
+- **careerops-db**: a free PostgreSQL 18 database, reachable only from inside Render.
+
+### How it works
+
+| Concern | How it's handled |
+|---|---|
+| Secrets | Render generates the database password and injects the connection string as `DATABASE_URL`. Nothing secret is stored in the repository. |
+| Migrations | The free plan has no pre-deploy command, so the container runs `alembic upgrade head` on start (`RUN_MIGRATIONS=true`). If it fails, the API does not start, the deploy fails, and the previous version keeps serving. Each migration runs in one transaction, so a failure leaves the database unchanged. |
+| Health checks | Render only routes traffic to a new deploy once `/health/ready` returns 200, meaning the app is up **and** can reach the database. |
+| Deploy trigger | Automatic deploys from `main`, only after the GitHub Actions checks pass. |
+| Database access | `ipAllowList: []` blocks connections from the internet. |
+
+### Deploy it
+
+1. Create a free account at [render.com](https://render.com) and connect your GitHub account.
+2. In the Render Dashboard choose **New → Blueprint**, select this repository and the `main` branch.
+3. Review the two resources (both on the **Free** plan) and click **Apply**.
+4. Wait for the first deploy, then open `https://<your-service>.onrender.com/docs`.
+
+### Free plan limitations
+
+| Limitation | Impact on this project |
+|---|---|
+| Web service sleeps after **15 minutes** without traffic | The first request after a pause takes about a minute while it wakes up. |
+| **750** free instance hours per workspace per month | Enough for one service running all month. Exceeding it suspends free services until the next month. |
+| Free PostgreSQL **expires 30 days** after creation | After 30 days the database becomes inaccessible; after a further **14 days** Render deletes it and its data unless upgraded to a paid plan. |
+| 1 GB database storage, **no backups**, one free database per workspace | Fine for a demo; do not store data you cannot lose. |
+| No shell access, single instance, no persistent disk | Not needed by this app. |
+| Pre-deploy command is paid-only | Migrations run at container start instead (see above). |
+
+To keep the demo running beyond 30 days, either upgrade the database to a paid plan or
+recreate the free database (the migrations rebuild the schema automatically, but existing
+data is lost).
+
 ## Project Status
 
 This project is in early development.
@@ -289,7 +338,7 @@ This project is in early development.
 
 **Planned (not yet implemented)**
 
-- [ ] Cloud deployment
+- [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
 - [ ] Authentication (user accounts, each user sees only their own applications)
 
 ## License

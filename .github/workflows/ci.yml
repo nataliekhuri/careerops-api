@@ -116,9 +116,50 @@ jobs:
       - name: Container runs as a non-root user
         run: test "$(docker compose exec -T api id -u)" != "0"
 
+      # The next two steps mimic Render: one DATABASE_URL and RUN_MIGRATIONS=true.
+      - name: "Render-style start: migrations on start, then serve"
+        run: |
+          set -euo pipefail
+          . ./.env
+          docker compose run --detach --no-deps --name render-style -p 8001:8000 \
+            -e RUN_MIGRATIONS=true \
+            -e DATABASE_URL="postgresql://careerops_user:${DB_PASSWORD}@db:5432/careerops" \
+            api
+          for i in $(seq 1 30); do
+            if curl -fsS http://localhost:8001/health/ready; then echo; break; fi
+            sleep 2
+          done
+          curl -fsS http://localhost:8001/health/ready > /dev/null
+          logs=$(docker logs render-style 2>&1)
+          echo "$logs" | grep -q "start.sh: migrations complete."
+          # The database was already migrated by the compose stack, so nothing new runs.
+          if echo "$logs" | grep -q "Running upgrade"; then echo "unexpected migration" >&2; exit 1; fi
+          docker rm -f render-style
+          echo "Render-style start passed"
+
+      - name: "Render-style start: failed migration stops the container"
+        run: |
+          set -uo pipefail
+          # This command is EXPECTED to fail, so capture its exit code instead of
+          # letting the step's `bash -e` stop at it.
+          status=0
+          docker compose run --rm --no-deps \
+            -e RUN_MIGRATIONS=true \
+            -e DB_CONNECT_TIMEOUT=2 \
+            -e DATABASE_URL="postgresql://nobody:wrong@no-such-host:5432/nothing" \
+            api > failed-start.log 2>&1 || status=$?
+          cat failed-start.log
+          echo "exit status: $status"
+          test "$status" -ne 0
+          grep -q "start.sh: migrations FAILED - not starting the API." failed-start.log
+          if grep -q "Uvicorn running" failed-start.log; then echo "API started despite failed migration" >&2; exit 1; fi
+          echo "Failed-migration guard passed"
+
       - name: Show logs on failure
         if: failure()
-        run: docker compose logs --no-color
+        run: |
+          docker compose logs --no-color
+          docker logs render-style 2>&1 || true
 
       - name: Stop the stack
         if: always()

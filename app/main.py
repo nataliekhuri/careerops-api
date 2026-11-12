@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 app = FastAPI(
     title="CareerOps API",
     description="An API to manage job applications",
-    version="1.3.0",
+    version="1.4.0",
 )
 
 register_error_handlers(app)
