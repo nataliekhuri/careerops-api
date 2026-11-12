@@ -28,6 +28,9 @@ services:
       # The free plan has no pre-deploy command, so migrations run at container
       # start (scripts/start.sh). A failed migration fails the deploy and the
       # previous version keeps serving.
+      # Signs login tokens. Render generates a random value once; it is never in Git.
+      - key: JWT_SECRET_KEY
+        generateValue: true
       - key: RUN_MIGRATIONS
         value: "true"
       # Render's proxy sets X-Forwarded-* headers; trust them for correct client info.

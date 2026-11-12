@@ -8,6 +8,8 @@ x-app-env: &app-env
   DB_NAME: ${DB_NAME:-careerops}
   DB_USER: ${DB_USER:-careerops_user}
   DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+  JWT_SECRET_KEY: ${JWT_SECRET_KEY:?Set JWT_SECRET_KEY in .env}
+  CORS_ORIGINS: ${CORS_ORIGINS:-}
 
 services:
   db:

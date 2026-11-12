@@ -81,12 +81,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Create a throwaway .env (random password, never stored)
+      - name: Create a throwaway .env (random secrets, never stored)
         run: |
           password="$(openssl rand -hex 24)"
+          jwt_secret="$(openssl rand -hex 32)"
           echo "::add-mask::$password"
+          echo "::add-mask::$jwt_secret"
           umask 077
-          echo "DB_PASSWORD=$password" > .env
+          printf 'DB_PASSWORD=%s\nJWT_SECRET_KEY=%s\n' "$password" "$jwt_secret" > .env
 
       - name: Build and start the stack
         run: docker compose up --build --detach
@@ -103,14 +105,23 @@ jobs:
       - name: Smoke test the API
         run: |
           set -euo pipefail
-          created=$(curl -fsS -X POST http://localhost:8000/applications \
-            -H "Content-Type: application/json" \
+          api=http://localhost:8000
+          # Unauthenticated requests are rejected.
+          test "$(curl -s -o /dev/null -w '%{http_code}' $api/applications)" = "401"
+          # Register, log in, then use the token.
+          curl -fsS -X POST $api/auth/register -H "Content-Type: application/json" \
+            -d '{"email": "ci@example.com", "password": "ci-password-123", "full_name": "CI"}' > /dev/null
+          token=$(curl -fsS -X POST $api/auth/login -d "username=ci@example.com&password=ci-password-123" \
+            | python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])")
+          echo "::add-mask::$token"
+          auth="Authorization: Bearer $token"
+          created=$(curl -fsS -X POST $api/applications -H "$auth" -H "Content-Type: application/json" \
             -d '{"company": "Docker Co", "position": "Backend Developer", "location": "Remote"}')
           echo "$created"
           id=$(echo "$created" | python3 -c "import sys, json; print(json.load(sys.stdin)['application']['id'])")
-          curl -fsS -X PATCH "http://localhost:8000/applications/$id" \
+          curl -fsS -X PATCH "$api/applications/$id" -H "$auth" \
             -H "Content-Type: application/json" -d '{"status": "Interview"}' | grep -q '"status":"Interview"'
-          curl -fsS -D - -o /dev/null "http://localhost:8000/applications?status=interview" | grep -qi '^x-total-count: 1'
+          curl -fsS -D - -o /dev/null "$api/applications?status=interview" -H "$auth" | grep -qi '^x-total-count: 1'
           echo "Smoke test passed"
 
       - name: Container runs as a non-root user

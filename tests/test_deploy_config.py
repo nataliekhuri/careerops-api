@@ -35,6 +35,10 @@ def test_database_url_comes_from_the_render_database():
     assert ENV["DATABASE_URL"]["fromDatabase"] == {"name": "careerops-db", "property": "connectionString"}
 
 
+def test_jwt_secret_is_generated_by_render():
+    assert ENV["JWT_SECRET_KEY"] == {"key": "JWT_SECRET_KEY", "generateValue": True}
+
+
 def test_migrations_run_on_start():
     assert ENV["RUN_MIGRATIONS"]["value"] == "true"
 
