@@ -24,25 +24,30 @@ Data is stored in **PostgreSQL**, so applications persist across server restarts
 
 ```
 app/
-├── main.py                  # creates the FastAPI app, error handlers and routes
-├── core/config.py           # settings from .env / environment (DB_* or DATABASE_URL)
+├── main.py                  # creates the FastAPI app, CORS, error handlers and routes
+├── core/
+│   ├── config.py            # settings from .env / environment (DB_* or DATABASE_URL, JWT, CORS)
+│   └── security.py          # Argon2 password hashing, JWT access tokens
 ├── db/
 │   ├── base.py              # SQLAlchemy base class
 │   └── session.py           # database engine and per-request session
-├── models/application.py    # "applications" database table
-├── schemas/application.py   # request/response models and validation rules
-├── crud/application.py      # database read/write functions
+├── models/                  # "users" and "applications" tables
+├── schemas/                 # request/response models and validation rules
+├── crud/                    # database read/write functions (always scoped to the owner)
 └── api/
-    ├── deps.py              # shared dependencies (DB session, application lookup)
+    ├── deps.py              # shared dependencies (DB session, current user, owned application)
     ├── errors.py            # safe 500/503 error responses + logging
     └── routes/
         ├── health.py        # /, /health (liveness), /health/ready (readiness)
+        ├── auth.py          # /auth/register, /auth/login, /users/me
         └── applications.py  # /applications CRUD endpoints
 alembic/
 ├── env.py                   # migration environment (app settings + migration lock)
 └── versions/                # migration scripts
 tests/
 ├── conftest.py              # fixtures: isolated test schema, rollback per test
+├── test_auth.py             # registration, login, tokens, profile, account deletion
+├── test_isolation.py        # users can never see or change each other's data
 ├── test_applications.py     # CRUD, validation and error-handling tests
 ├── test_application_workflow.py  # statuses, timestamps, PATCH, filters, pagination
 ├── test_health.py
@@ -58,6 +63,40 @@ render.yaml                  # Render Blueprint (free web service + free Postgre
 ```
 
 ## Features
+
+Every user has their own private list of applications. All `/applications` and
+`/users/me` endpoints require a bearer token; other users' data is never visible.
+
+### Authentication
+
+| Method   | Endpoint                     | Description                          |
+|----------|------------------------------|--------------------------------------|
+| `POST`   | `/auth/register`             | Create an account (`email`, `password`, optional `full_name`) |
+| `POST`   | `/auth/login`                | Form fields `username` (your email) and `password` → `access_token` |
+| `GET`    | `/users/me`                  | Your profile |
+| `PATCH`  | `/users/me`                  | Update `full_name` |
+| `POST`   | `/users/me/password`         | Change password (`current_password`, `new_password`) |
+| `DELETE` | `/users/me`                  | Delete your account and all its applications (`password` required) |
+
+```bash
+curl -X POST http://127.0.0.1:8000/auth/register -H "Content-Type: application/json"   -d '{"email": "ann@example.com", "password": "correct-horse-7", "full_name": "Ann"}'
+TOKEN=$(curl -s -X POST http://127.0.0.1:8000/auth/login   -d "username=ann@example.com&password=correct-horse-7" | python -c "import sys,json; print(json.load(sys.stdin)['access_token'])")
+curl http://127.0.0.1:8000/applications -H "Authorization: Bearer $TOKEN"
+```
+
+In Swagger UI (`/docs`), click **Authorize** and sign in with your email and password.
+
+**Security details**
+
+- Passwords are hashed with **Argon2id**; plain passwords are never stored or logged.
+- Passwords need 8–128 characters and must not be only letters or only digits.
+- Emails are case-insensitive and unique.
+- Login tokens are **JWTs** (HS256) signed with `JWT_SECRET_KEY` and expire after
+  `ACCESS_TOKEN_EXPIRE_MINUTES` (default 60). The API refuses to start without the secret.
+- Login errors don't reveal whether an email is registered, and take similar time either way.
+- Requests for another user's application return **404**, exactly like a missing one.
+
+### Applications and health
 
 | Method   | Endpoint                     | Description                          |
 |----------|------------------------------|--------------------------------------|
@@ -203,6 +242,9 @@ cp .env.example .env
 | `DB_CONNECT_TIMEOUT` | `5`       | Seconds to wait for a database connection |
 | `DATABASE_URL` | —               | Full PostgreSQL URL; if set, it replaces the `DB_*` values (used on Render) |
 | `RUN_MIGRATIONS` | `false`       | Container only: run `alembic upgrade head` before starting the API |
+| `JWT_SECRET_KEY` | —             | **Required.** Signs login tokens; at least 32 random characters |
+| `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Login token lifetime |
+| `CORS_ORIGINS` | —               | Comma-separated browser origins allowed to call the API (e.g. the frontend) |
 
 `.env` is listed in `.gitignore` and must never be committed.
 
@@ -287,7 +329,7 @@ The repository includes a [Render Blueprint](https://render.com/docs/blueprint-s
 
 | Concern | How it's handled |
 |---|---|
-| Secrets | Render generates the database password and injects the connection string as `DATABASE_URL`. Nothing secret is stored in the repository. |
+| Secrets | Render generates the database password (injected as `DATABASE_URL`) and the token-signing key `JWT_SECRET_KEY`. Nothing secret is stored in the repository. |
 | Migrations | The free plan has no pre-deploy command, so the container runs `alembic upgrade head` on start (`RUN_MIGRATIONS=true`). If it fails, the API does not start, the deploy fails, and the previous version keeps serving. Each migration runs in one transaction, so a failure leaves the database unchanged. |
 | Health checks | Render only routes traffic to a new deploy once `/health/ready` returns 200, meaning the app is up **and** can reach the database. |
 | Deploy trigger | Automatic deploys from `main`, only after the GitHub Actions checks pass. |
@@ -321,6 +363,8 @@ This project is in early development.
 
 **Completed**
 
+- [x] User accounts: registration, login (JWT), profile, password change, account deletion
+- [x] Per-user data ownership with tested cross-user isolation
 - [x] CRUD endpoints for job applications, including `PATCH` partial updates
 - [x] Request validation with Pydantic (length limits, blank and unknown fields rejected)
 - [x] Application status workflow, enforced in the API and the database
@@ -339,7 +383,9 @@ This project is in early development.
 **Planned (not yet implemented)**
 
 - [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
-- [ ] Authentication (user accounts, each user sees only their own applications)
+- [ ] Companies, interviews and dashboard statistics
+- [ ] React + TypeScript frontend
+- [ ] AI career assistant
 
 ## License
 
