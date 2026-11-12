@@ -5,6 +5,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
+from sqlalchemy.exc import DBAPIError
 
 from app import models  # noqa: F401  (registers tables with Base)
 from app.db.base import Base
@@ -79,7 +80,7 @@ def test_workflow_migration_stops_on_unknown_status_and_changes_nothing():
             conn.commit()
             _insert(conn, " applied ", "Pending")
 
-            with pytest.raises(RuntimeError, match="unknown status values found: 'Pending'"):
+            with pytest.raises(DBAPIError, match=r"unknown status values found: 'Pending' \(1 rows\)"):
                 migrations.upgrade(conn, WORKFLOW)
             conn.rollback()
 

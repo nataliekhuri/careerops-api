@@ -38,27 +38,32 @@ STATUS_LIST_SQL = ", ".join(f"'{s}'" for s in STATUSES)
 
 
 def upgrade() -> None:
-    conn = op.get_bind()
+    # Plain SQL (values are the fixed constants above), so `alembic upgrade --sql`
+    # shows exactly what will run.
 
     # 1. Normalise existing values case-insensitively.
     for status in STATUSES:
-        conn.execute(
-            sa.text(
-                "UPDATE applications SET status = :status "
-                "WHERE lower(btrim(status)) = lower(:status) AND status <> :status"
-            ),
-            {"status": status},
+        op.execute(
+            f"UPDATE applications SET status = '{status}' "
+            f"WHERE lower(btrim(status)) = lower('{status}') AND status <> '{status}'"
         )
 
-    unknown = conn.execute(
-        sa.text(f"SELECT status, count(*) FROM applications WHERE status NOT IN ({STATUS_LIST_SQL}) GROUP BY status")
-    ).all()
-    if unknown:
-        details = ", ".join(f"{status!r} ({count} rows)" for status, count in unknown)
-        raise RuntimeError(
-            f"Migration stopped: unknown status values found: {details}. "
-            f"Update them to one of {', '.join(STATUSES)} and run the migration again. Nothing was changed."
-        )
+    # Stop (and roll back everything) if any status is still not allowed.
+    op.execute(
+        f"""
+        DO $$
+        DECLARE unknown_values text;
+        BEGIN
+            SELECT string_agg(format('%L (%s rows)', status, n), ', ' ORDER BY status)
+              INTO unknown_values
+              FROM (SELECT status, count(*) AS n FROM applications
+                    WHERE status NOT IN ({STATUS_LIST_SQL}) GROUP BY status) AS bad;
+            IF unknown_values IS NOT NULL THEN
+                RAISE EXCEPTION 'Migration stopped: unknown status values found: %. Update them to one of {", ".join(STATUSES)} and run the migration again. Nothing was changed.', unknown_values;
+            END IF;
+        END $$;
+        """
+    )
 
     # 2-3. Constraint and default.
     op.create_check_constraint(op.f("ck_applications_status"), "applications", f"status IN ({STATUS_LIST_SQL})")
