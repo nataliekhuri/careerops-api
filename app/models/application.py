@@ -1,10 +1,14 @@
 from datetime import datetime
 from enum import StrEnum
+from typing import TYPE_CHECKING
 
-from sqlalchemy import CheckConstraint, DateTime, String, Text, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, Text, func
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db.base import Base
+
+if TYPE_CHECKING:
+    from app.models.user import User
 
 
 class ApplicationStatus(StrEnum):
@@ -34,6 +38,8 @@ class Application(Base):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True)
+    # Owner. Deleting a user deletes their applications.
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
     company: Mapped[str] = mapped_column(String(255))
     position: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(
@@ -50,3 +56,5 @@ class Application(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.clock_timestamp()
     )
+
+    user: Mapped["User"] = relationship(back_populates="applications")

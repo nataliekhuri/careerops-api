@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.exc import OperationalError
 
+from app.core.security import create_access_token
 from app.db.session import get_db
 from app.main import app
 
@@ -26,7 +27,11 @@ class BrokenSession:
 def broken_client():
     def use(error: Exception) -> TestClient:
         app.dependency_overrides[get_db] = lambda: BrokenSession(error)
-        return TestClient(app, raise_server_exceptions=False)
+        test_client = TestClient(app, raise_server_exceptions=False)
+        # A validly signed token, so requests reach the database (which then fails).
+        token, _ = create_access_token(1)
+        test_client.headers["Authorization"] = f"Bearer {token}"
+        return test_client
 
     yield use
     app.dependency_overrides.clear()

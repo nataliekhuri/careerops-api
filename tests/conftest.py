@@ -10,18 +10,28 @@ afterwards, so tests are isolated from each other.
 
 import os
 import re
-from collections.abc import Iterator
+import secrets
+from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import Engine, create_engine, text
-from sqlalchemy.orm import Session
+# Tests sign their own tokens with a throwaway key generated for this run only.
+os.environ.setdefault("JWT_SECRET_KEY", secrets.token_urlsafe(48))
 
-from app.core.config import get_settings
-from app.db.session import get_db
-from app.main import app
-from tests import migrations
+import pytest  # noqa: E402
+from fastapi.testclient import TestClient  # noqa: E402
+from sqlalchemy import Engine, create_engine, text  # noqa: E402
+from sqlalchemy.orm import Session  # noqa: E402
+
+from app.core.config import get_settings  # noqa: E402
+from app.core.security import create_access_token  # noqa: E402
+from app.crud import user as user_crud  # noqa: E402
+from app.db.session import get_db  # noqa: E402
+from app.main import app  # noqa: E402
+from app.models.user import User  # noqa: E402
+from app.schemas.user import UserCreate  # noqa: E402
+from tests import migrations  # noqa: E402
+
+TEST_PASSWORD = "test-password-123"
 
 TEST_SCHEMA = os.getenv("TEST_DB_SCHEMA", "test_careerops")
 
@@ -77,13 +87,57 @@ def db_session(engine: Engine) -> Iterator[Session]:
 
 
 @pytest.fixture
-def client(db_session: Session) -> Iterator[TestClient]:
+def make_user(db_session: Session) -> Callable[..., User]:
+    """Create users directly in the test database."""
+    counter = iter(range(1, 10_000))
+
+    def _make(email: str | None = None, password: str = TEST_PASSWORD, full_name: str = "Test User") -> User:
+        email = email or f"user{next(counter)}@example.com"
+        return user_crud.create_user(db_session, UserCreate(email=email, password=password, full_name=full_name))
+
+    return _make
+
+
+@pytest.fixture
+def make_client(db_session: Session) -> Iterator[Callable[[User | None], TestClient]]:
+    """Create test clients; pass a user to send that user's bearer token on every request."""
     app.dependency_overrides[get_db] = lambda: db_session
+    clients: list[TestClient] = []
+
+    def _make(user: User | None = None) -> TestClient:
+        test_client = TestClient(app)
+        test_client.__enter__()
+        clients.append(test_client)
+        if user is not None:
+            token, _ = create_access_token(user.id)
+            test_client.headers["Authorization"] = f"Bearer {token}"
+            test_client.user = user  # type: ignore[attr-defined]
+        return test_client
+
     try:
-        with TestClient(app) as test_client:
-            yield test_client
+        yield _make
     finally:
+        for test_client in clients:
+            test_client.__exit__(None, None, None)
         app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def user(make_user) -> User:
+    """The default signed-in user."""
+    return make_user(email="owner@example.com")
+
+
+@pytest.fixture
+def client(make_client, user: User) -> TestClient:
+    """A client signed in as the default user."""
+    return make_client(user)
+
+
+@pytest.fixture
+def anon_client(make_client) -> TestClient:
+    """A client that is not signed in."""
+    return make_client(None)
 
 
 @pytest.fixture
