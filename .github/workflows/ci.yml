@@ -122,6 +122,15 @@ jobs:
           curl -fsS -X PATCH "$api/applications/$id" -H "$auth" \
             -H "Content-Type: application/json" -d '{"status": "Interview"}' | grep -q '"status":"Interview"'
           curl -fsS -D - -o /dev/null "$api/applications?status=interview" -H "$auth" | grep -qi '^x-total-count: 1'
+          # Companies, interviews and the dashboard.
+          company_id=$(curl -fsS -X POST $api/companies -H "$auth" -H "Content-Type: application/json" \
+            -d '{"name": "Docker Co"}' | python3 -c "import sys, json; print(json.load(sys.stdin)['id'])")
+          curl -fsS -X PATCH "$api/applications/$id" -H "$auth" -H "Content-Type: application/json" \
+            -d "{\"company_id\": $company_id}" | grep -q "\"company_id\":$company_id"
+          curl -fsS -X POST $api/interviews -H "$auth" -H "Content-Type: application/json" \
+            -d "{\"application_id\": $id, \"scheduled_at\": \"2030-01-15T10:00:00Z\"}" | grep -q '"outcome":"pending"'
+          curl -fsS $api/dashboard/stats -H "$auth" \
+            | python3 -c "import sys, json; d = json.load(sys.stdin); assert d['total_applications'] == 1 and d['total_interviews'] == 1 and d['total_companies'] == 1, d"
           echo "Smoke test passed"
 
       - name: Container runs as a non-root user

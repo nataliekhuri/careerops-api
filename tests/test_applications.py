@@ -24,7 +24,7 @@ def test_create_returns_message_and_application(client, payload):
     body = response.json()
     assert body["message"] == "Application created successfully"
     assert isinstance(body["application"]["id"], int)
-    assert without_timestamps(body["application"]) == {"id": body["application"]["id"], **payload}
+    assert without_timestamps(body["application"]) == {"id": body["application"]["id"], "company_id": None, **payload}
 
 
 def test_create_applies_defaults(client):
@@ -92,7 +92,7 @@ def test_update_replaces_all_fields(client, payload):
     response = client.put(f"/applications/{application['id']}", json=changes)
 
     assert response.status_code == 200
-    assert without_timestamps(response.json()) == {"id": application["id"], **changes}
+    assert without_timestamps(response.json()) == {"id": application["id"], "company_id": None, **changes}
     assert client.get(f"/applications/{application['id']}").json()["status"] == "Interview"
 
 
