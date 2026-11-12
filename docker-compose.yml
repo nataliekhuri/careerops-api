@@ -1,0 +1,46 @@
+# Run the whole stack locally:  docker compose up --build
+# Requires DB_PASSWORD in .env (see .env.example). The database in this stack is
+# separate from any PostgreSQL server already installed on your machine.
+
+x-app-env: &app-env
+  DB_HOST: db
+  DB_PORT: "5432"
+  DB_NAME: ${DB_NAME:-careerops}
+  DB_USER: ${DB_USER:-careerops_user}
+  DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+
+services:
+  db:
+    image: postgres:18
+    environment:
+      POSTGRES_DB: ${DB_NAME:-careerops}
+      POSTGRES_USER: ${DB_USER:-careerops_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  migrate:
+    build: .
+    command: ["alembic", "upgrade", "head"]
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build: .
+    environment: *app-env
+    ports:
+      - "8000:8000"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+volumes:
+  pgdata:

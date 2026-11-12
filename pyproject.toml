@@ -1,9 +1,27 @@
 [project]
 name = "careerops-api"
-version = "1.2.0"
+version = "1.3.0"
 description = "A REST API for tracking job applications, built with FastAPI and PostgreSQL."
 requires-python = ">=3.12"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers"
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+extend-exclude = ["alembic/versions"]
+
+[tool.ruff.lint]
+# pycodestyle, pyflakes, isort, bugbear, pyupgrade, simplify, naming, FastAPI
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "N", "FAST"]
+# B008: FastAPI's Depends(...) in argument defaults is the documented pattern.
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+# {application_id} is consumed by the shared ApplicationOr404 dependency (app/api/deps.py).
+"app/api/routes/*" = ["FAST003"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "tests"]

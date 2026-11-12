@@ -30,7 +30,9 @@ def test_each_allowed_status_is_accepted(client, status):
     assert create(client, status=status)["status"] == status
 
 
-@pytest.mark.parametrize(("given", "stored"), [("interview", "Interview"), ("  OFFER ", "Offer"), ("rejected", "Rejected")])
+@pytest.mark.parametrize(
+    ("given", "stored"), [("interview", "Interview"), ("  OFFER ", "Offer"), ("rejected", "Rejected")]
+)
 def test_status_is_case_insensitive_and_normalised(client, given, stored):
     assert create(client, status=given)["status"] == stored
 
@@ -45,7 +47,9 @@ def test_unknown_status_returns_422(client, status):
 def test_database_rejects_invalid_status_even_without_the_api(db_session):
     with pytest.raises(IntegrityError):
         db_session.execute(
-            text("INSERT INTO applications (company, position, location, status, notes) VALUES ('A','B','C','Bogus','')")
+            text(
+                "INSERT INTO applications (company, position, location, status, notes) VALUES ('A','B','C','Bogus','')"
+            )
         )
         db_session.flush()
     db_session.rollback()

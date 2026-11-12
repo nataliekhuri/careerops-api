@@ -1,0 +1,6 @@
+# Store text files with LF line endings (required for files used inside Linux containers).
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

@@ -1,11 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
-from sqlalchemy.orm import Session
+from fastapi import APIRouter, Query, Response
 
+from app.api.deps import ApplicationOr404, DbSession
 from app.crud import application as crud
-from app.db.session import get_db
-from app.models.application import Application
 from app.schemas.application import (
     ApplicationFilters,
     ApplicationMessage,
@@ -16,30 +14,19 @@ from app.schemas.application import (
 
 router = APIRouter(prefix="/applications", tags=["applications"])
 
-
-def get_application_or_404(application_id: int, db: Session = Depends(get_db)) -> Application:
-    application = crud.get_application(db, application_id)
-    if application is None:
-        raise HTTPException(status_code=404, detail="Application not found")
-    return application
+TOTAL_COUNT_HEADER = {
+    "X-Total-Count": {"description": "Total results matching the filters", "schema": {"type": "integer"}}
+}
 
 
 @router.post("", response_model=ApplicationMessage)
-def create_application(data: JobApplication, db: Session = Depends(get_db)):
+def create_application(data: JobApplication, db: DbSession):
     application = crud.create_application(db, data)
     return {"message": "Application created successfully", "application": application}
 
 
-@router.get(
-    "",
-    response_model=list[ApplicationRead],
-    responses={200: {"headers": {"X-Total-Count": {"description": "Total results matching the filters", "schema": {"type": "integer"}}}}},
-)
-def get_applications(
-    response: Response,
-    filters: Annotated[ApplicationFilters, Query()],
-    db: Session = Depends(get_db),
-):
+@router.get("", response_model=list[ApplicationRead], responses={200: {"headers": TOTAL_COUNT_HEADER}})
+def get_applications(response: Response, filters: Annotated[ApplicationFilters, Query()], db: DbSession):
     """List applications with optional filters, sorting and pagination.
 
     The total number of matching applications is returned in the `X-Total-Count` header.
@@ -50,35 +37,24 @@ def get_applications(
 
 
 @router.get("/{application_id}", response_model=ApplicationRead)
-def get_application(application: Application = Depends(get_application_or_404)):
+def get_application(application: ApplicationOr404):
     return application
 
 
 @router.put("/{application_id}", response_model=ApplicationRead)
-def update_application(
-    data: JobApplication,
-    application: Application = Depends(get_application_or_404),
-    db: Session = Depends(get_db),
-):
+def update_application(data: JobApplication, application: ApplicationOr404, db: DbSession):
     """Replace all fields of an application."""
     return crud.update_application(db, application, data)
 
 
 @router.patch("/{application_id}", response_model=ApplicationRead)
-def patch_application(
-    data: ApplicationUpdate,
-    application: Application = Depends(get_application_or_404),
-    db: Session = Depends(get_db),
-):
+def patch_application(data: ApplicationUpdate, application: ApplicationOr404, db: DbSession):
     """Update only the fields that are sent, e.g. `{"status": "Interview"}`."""
     return crud.patch_application(db, application, data)
 
 
 @router.delete("/{application_id}", response_model=ApplicationMessage)
-def delete_application(
-    application: Application = Depends(get_application_or_404),
-    db: Session = Depends(get_db),
-):
+def delete_application(application: ApplicationOr404, db: DbSession):
     deleted = ApplicationRead.model_validate(application)
     crud.delete_application(db, application)
     return {"message": "Application deleted successfully", "application": deleted}
