@@ -16,13 +16,15 @@ Data is stored in **PostgreSQL**, so applications persist across server restarts
 - [pydantic-settings](https://docs.pydantic.dev/latest/concepts/pydantic_settings/) — configuration from `.env`
 - [Uvicorn](https://www.uvicorn.org/) — ASGI server
 - [pytest](https://docs.pytest.org/) — automated tests, run on every push by GitHub Actions
+- [Ruff](https://docs.astral.sh/ruff/) — linting and formatting
+- [Docker](https://www.docker.com/) / Docker Compose — containerised API, database and migrations
 - Python 3.13
 
 ## Project Structure
 
 ```
 app/
-├── main.py                  # creates the FastAPI app and includes routes
+├── main.py                  # creates the FastAPI app, error handlers and routes
 ├── core/config.py           # settings loaded from .env
 ├── db/
 │   ├── base.py              # SQLAlchemy base class
@@ -30,18 +32,25 @@ app/
 ├── models/application.py    # "applications" database table
 ├── schemas/application.py   # request/response models and validation rules
 ├── crud/application.py      # database read/write functions
-└── api/routes/
-    ├── health.py            # / and /health
-    └── applications.py      # /applications CRUD endpoints
+└── api/
+    ├── deps.py              # shared dependencies (DB session, application lookup)
+    ├── errors.py            # safe 500/503 error responses + logging
+    └── routes/
+        ├── health.py        # /, /health (liveness), /health/ready (readiness)
+        └── applications.py  # /applications CRUD endpoints
 alembic/
 ├── env.py                   # migration environment (reads DB settings from .env)
 └── versions/                # migration scripts
 tests/
 ├── conftest.py              # fixtures: isolated test schema, rollback per test
 ├── test_applications.py     # CRUD, validation and error-handling tests
+├── test_application_workflow.py  # statuses, timestamps, PATCH, filters, pagination
 ├── test_health.py
-└── test_migrations.py       # migrations match the models and are reversible
-.github/workflows/ci.yml     # runs migrations + tests against PostgreSQL 18
+├── test_reliability.py      # readiness, database outages, unexpected errors
+└── test_migrations.py       # migrations match the models, handle data, are reversible
+Dockerfile                   # production image (non-root, honours $PORT)
+docker-compose.yml           # db + migrate + api for local use
+.github/workflows/ci.yml     # lint, tests on PostgreSQL 18, Docker build + smoke test
 ```
 
 ## Features
@@ -49,7 +58,8 @@ tests/
 | Method   | Endpoint                     | Description                          |
 |----------|------------------------------|--------------------------------------|
 | `GET`    | `/`                          | Welcome message                      |
-| `GET`    | `/health`                    | Health check                         |
+| `GET`    | `/health`                    | Liveness: the process is running (no database access) |
+| `GET`    | `/health/ready`              | Readiness: database reachable (200) or not (503) |
 | `POST`   | `/applications`              | Create a job application             |
 | `GET`    | `/applications`              | List applications (filter, sort, paginate) |
 | `GET`    | `/applications/{id}`         | Get one application (404 if missing) |
@@ -121,7 +131,21 @@ Example request body for `POST /applications`:
 }
 ```
 
-## Getting Started
+## Quick Start with Docker
+
+Requires [Docker](https://docs.docker.com/get-docker/). This starts PostgreSQL, applies
+the migrations and runs the API, using a database inside Docker (separate from any
+PostgreSQL already on your machine):
+
+```bash
+cp .env.example .env      # then set DB_PASSWORD in .env
+docker compose up --build
+```
+
+The API is then at `http://localhost:8000/docs`. Stop it with `docker compose down`
+(add `--volumes` to also delete the Docker database).
+
+## Getting Started (without Docker)
 
 ### 1. Create and activate a virtual environment
 
@@ -172,6 +196,7 @@ cp .env.example .env
 | `DB_NAME`     | `careerops`      | Database name          |
 | `DB_USER`     | `careerops_user` | Database user          |
 | `DB_PASSWORD` | —                | Database password (required) |
+| `DB_CONNECT_TIMEOUT` | `5`       | Seconds to wait for a database connection |
 
 `.env` is listed in `.gitignore` and must never be committed.
 
@@ -209,6 +234,25 @@ Tests use the database from `.env`, but run inside a temporary schema
 (`test_careerops`) that is created by the migrations and dropped afterwards.
 Your real data is never read or modified, and every test is rolled back.
 
+## Code Quality
+
+```bash
+ruff check .          # lint
+ruff format .         # format
+```
+
+CI runs three jobs on every pull request: **lint** (Ruff), **test** (migrations,
+`alembic check` and pytest on PostgreSQL 18) and **docker** (builds the image, starts
+the Compose stack and smoke-tests the running API).
+
+## Error Handling
+
+- Invalid input: **422** with details of each problem.
+- Missing application: **404** `{"detail": "Application not found"}`.
+- Database unreachable: **503** `{"detail": "Service temporarily unavailable"}`.
+- Anything unexpected: **500** `{"detail": "Internal server error"}`. The full error is
+  logged on the server; internal details are never sent to the client.
+
 ## Database Migrations
 
 Schema changes are managed with Alembic:
@@ -233,18 +277,20 @@ This project is in early development.
 - [x] Application status workflow, enforced in the API and the database
 - [x] `created_at` / `updated_at` timestamps
 - [x] Filtering, sorting and pagination
-- [x] Health check endpoint
+- [x] Liveness and readiness health checks
+- [x] Safe error responses (no internal details leaked) and database connection timeout
 - [x] PostgreSQL database for persistent storage
 - [x] Configuration via environment variables (`.env`)
 - [x] Database migrations with Alembic (tested for data handling and rollback)
 - [x] Automated tests with pytest
-- [x] Continuous integration with GitHub Actions
+- [x] Continuous integration with GitHub Actions (lint, tests, Docker smoke test)
+- [x] Linting and formatting with Ruff
+- [x] Docker image and Docker Compose setup
 
 **Planned (not yet implemented)**
 
-- [ ] Consistent error response format and database readiness check
-- [ ] Authentication
-- [ ] Docker setup
+- [ ] Cloud deployment
+- [ ] Authentication (user accounts, each user sees only their own applications)
 
 ## License
 
