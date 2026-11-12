@@ -6,6 +6,16 @@ A REST API for tracking job applications, built with FastAPI.
 
 Data is stored in **PostgreSQL**, so applications persist across server restarts.
 
+## Live Demo
+
+- **API:** https://careerops-api.onrender.com
+- **Interactive docs (Swagger UI):** https://careerops-api.onrender.com/docs
+- **Health / readiness:** [`/health`](https://careerops-api.onrender.com/health) · [`/health/ready`](https://careerops-api.onrender.com/health/ready)
+
+> Hosted on Render's free plan: the service sleeps after 15 minutes without traffic, so
+> the first request can take about a minute. The demo database is temporary and may be
+> reset at any time — please don't enter personal data.
+
 ## Tech Stack
 
 - [FastAPI](https://fastapi.tiangolo.com/) — web framework
