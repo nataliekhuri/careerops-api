@@ -51,26 +51,63 @@ tests/
 | `GET`    | `/`                          | Welcome message                      |
 | `GET`    | `/health`                    | Health check                         |
 | `POST`   | `/applications`              | Create a job application             |
-| `GET`    | `/applications`              | List all job applications            |
+| `GET`    | `/applications`              | List applications (filter, sort, paginate) |
 | `GET`    | `/applications/{id}`         | Get one application (404 if missing) |
-| `PUT`    | `/applications/{id}`         | Replace an application (404 if missing) |
+| `PUT`    | `/applications/{id}`         | Replace all fields (404 if missing)  |
+| `PATCH`  | `/applications/{id}`         | Update only the fields sent (404 if missing) |
 | `DELETE` | `/applications/{id}`         | Delete an application (404 if missing)  |
+
+### Listing, filtering and pagination
+
+`GET /applications` accepts these optional query parameters:
+
+| Parameter  | Example            | Description |
+|------------|--------------------|-------------|
+| `status`   | `Interview`        | Exact status (case-insensitive) |
+| `company`  | `acme`             | Company contains this text (case-insensitive) |
+| `location` | `berlin`           | Location contains this text (case-insensitive) |
+| `sort`     | `-created_at`      | `created_at`, `updated_at`, `company` or `status`; prefix `-` for descending. Default: `created_at` |
+| `limit`    | `20`               | Page size, 1–100. Default: 50 |
+| `offset`   | `40`               | Results to skip. Default: 0 |
+
+The response body is a JSON list. The total number of matching applications
+(ignoring `limit`/`offset`) is returned in the **`X-Total-Count`** header.
+
+```bash
+curl -i "http://127.0.0.1:8000/applications?status=interview&sort=-updated_at&limit=10"
+```
+
+### Partial updates
+
+`PATCH` changes only the fields you send; everything else stays the same:
+
+```bash
+curl -X PATCH http://127.0.0.1:8000/applications/1 \
+  -H "Content-Type: application/json" \
+  -d '{"status": "Interview"}'
+```
 
 ## Data Model
 
 Each job application has the following fields:
 
-| Field      | Type   | Required | Default     | Rules |
-|------------|--------|----------|-------------|-------|
-| `id`       | int    | —        | Assigned by the server | |
-| `company`  | string | Yes      | —           | 1–255 characters |
-| `position` | string | Yes      | —           | 1–255 characters |
-| `location` | string | Yes      | —           | 1–255 characters |
-| `status`   | string | No       | `"Applied"` | 1–50 characters |
-| `notes`    | string | No       | `""`        | up to 5000 characters |
+| Field        | Type     | Required | Default     | Rules |
+|--------------|----------|----------|-------------|-------|
+| `id`         | int      | —        | Assigned by the server | |
+| `company`    | string   | Yes      | —           | 1–255 characters |
+| `position`   | string   | Yes      | —           | 1–255 characters |
+| `location`   | string   | Yes      | —           | 1–255 characters |
+| `status`     | string   | No       | `"Applied"` | One of the statuses below (case-insensitive) |
+| `notes`      | string   | No       | `""`        | up to 5000 characters |
+| `created_at` | datetime | —        | Set by the server | Read-only, ISO 8601 with time zone |
+| `updated_at` | datetime | —        | Set by the server | Read-only; changes whenever a value changes |
 
-Surrounding whitespace is trimmed, blank values are rejected, and unknown fields are
-not allowed. Invalid input returns **422 Unprocessable Entity** with details of each problem.
+**Statuses:** `Applied`, `Screening`, `Interview`, `Offer`, `Rejected`, `Withdrawn`.
+They are enforced by both the API and a database `CHECK` constraint.
+
+Surrounding whitespace is trimmed, blank values and `null`s are rejected, and unknown
+fields are not allowed. Invalid input returns **422 Unprocessable Entity** with details
+of each problem.
 
 Example request body for `POST /applications`:
 
@@ -191,19 +228,21 @@ This project is in early development.
 
 **Completed**
 
-- [x] CRUD endpoints for job applications
+- [x] CRUD endpoints for job applications, including `PATCH` partial updates
 - [x] Request validation with Pydantic (length limits, blank and unknown fields rejected)
+- [x] Application status workflow, enforced in the API and the database
+- [x] `created_at` / `updated_at` timestamps
+- [x] Filtering, sorting and pagination
 - [x] Health check endpoint
 - [x] PostgreSQL database for persistent storage
 - [x] Configuration via environment variables (`.env`)
-- [x] Database migrations with Alembic
+- [x] Database migrations with Alembic (tested for data handling and rollback)
 - [x] Automated tests with pytest
 - [x] Continuous integration with GitHub Actions
 
 **Planned (not yet implemented)**
 
-- [ ] Application status workflow (fixed set of statuses) and timestamps
-- [ ] Filtering, search and pagination
+- [ ] Consistent error response format and database readiness check
 - [ ] Authentication
 - [ ] Docker setup
 
