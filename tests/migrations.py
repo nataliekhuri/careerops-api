@@ -2,9 +2,10 @@
 
 from pathlib import Path
 
-from alembic import command
 from alembic.config import Config
 from sqlalchemy import Connection
+
+from alembic import command
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 

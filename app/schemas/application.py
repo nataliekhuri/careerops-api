@@ -108,8 +108,12 @@ class ApplicationFilters(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     status: Status | None = Field(default=None, description="Exact status (case-insensitive)")
-    company: str | None = Field(default=None, max_length=NAME_MAX_LENGTH, description="Company contains (case-insensitive)")
-    location: str | None = Field(default=None, max_length=NAME_MAX_LENGTH, description="Location contains (case-insensitive)")
+    company: str | None = Field(
+        default=None, max_length=NAME_MAX_LENGTH, description="Company contains (case-insensitive)"
+    )
+    location: str | None = Field(
+        default=None, max_length=NAME_MAX_LENGTH, description="Location contains (case-insensitive)"
+    )
     sort: SortField = Field(default=SortField.CREATED_AT, description="Sort order; prefix with '-' for descending")
     limit: int = Field(default=50, ge=1, le=100, description="Maximum number of results (1-100)")
     offset: int = Field(default=0, ge=0, description="Number of results to skip")
