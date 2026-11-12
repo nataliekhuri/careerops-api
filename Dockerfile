@@ -18,6 +18,7 @@ RUN pip install -r requirements.txt
 COPY alembic.ini .
 COPY alembic ./alembic
 COPY app ./app
+COPY scripts ./scripts
 
 USER appuser
 
@@ -26,5 +27,6 @@ EXPOSE 8000
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import os, sys, urllib.request; port = os.environ.get('PORT', '8000'); sys.exit(0 if urllib.request.urlopen(f'http://127.0.0.1:{port}/health', timeout=3).status == 200 else 1)"
 
-# Hosting platforms usually provide the port in $PORT; default to 8000.
-CMD ["sh", "-c", "exec uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers"]
+# Starts the API on $PORT (default 8000). Set RUN_MIGRATIONS=true to apply
+# migrations first; see scripts/start.sh.
+CMD ["sh", "scripts/start.sh"]

@@ -1,8 +1,8 @@
 """
 Alembic migration environment.
 
-The database URL comes from the app's settings (DB_* values in .env or environment
-variables), so no credentials are stored in alembic.ini.
+The database URL comes from the app's settings (DATABASE_URL or DB_* values in
+.env or environment variables), so no credentials are stored in alembic.ini.
 
 Tests can pass an existing connection via `config.attributes["connection"]`
 to run migrations inside a throwaway schema.
@@ -10,7 +10,7 @@ to run migrations inside a throwaway schema.
 
 from logging.config import fileConfig
 
-from sqlalchemy import create_engine, pool
+from sqlalchemy import create_engine, pool, text
 
 from alembic import context
 from app import models  # noqa: F401  (registers tables with Base.metadata)
@@ -51,9 +51,17 @@ def run_migrations_online() -> None:
     engine.dispose()
 
 
+# Arbitrary constant key for a PostgreSQL advisory lock that serialises migration runs.
+MIGRATION_LOCK_KEY = 7_240_317_001
+
+
 def _run(connection) -> None:
     context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
     with context.begin_transaction():
+        # If several app instances start at once (e.g. RUN_MIGRATIONS=true on a
+        # deploy), only one runs migrations at a time; the others wait, then find
+        # nothing left to do. The lock is released automatically at commit/rollback.
+        connection.execute(text("SELECT pg_advisory_xact_lock(:key)"), {"key": MIGRATION_LOCK_KEY})
         context.run_migrations()
 
 

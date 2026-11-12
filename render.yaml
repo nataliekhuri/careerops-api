@@ -1,0 +1,46 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+#
+# Creates a free Docker web service and a free PostgreSQL database.
+# No secrets are stored here: Render generates the database password and passes
+# the connection string to the app as DATABASE_URL.
+#
+# Free-plan notes (see README "Deployment"): the web service sleeps after 15 minutes
+# without traffic, and the free database EXPIRES 30 days after creation.
+
+services:
+  - type: web
+    name: careerops-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    dockerfilePath: ./Dockerfile
+    # Render only switches traffic to a new deploy once this returns 200,
+    # i.e. the app is running AND can reach its database.
+    healthCheckPath: /health/ready
+    # Deploy from main only after the GitHub Actions checks pass.
+    branch: main
+    autoDeployTrigger: checksPass
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: careerops-db
+          property: connectionString
+      # The free plan has no pre-deploy command, so migrations run at container
+      # start (scripts/start.sh). A failed migration fails the deploy and the
+      # previous version keeps serving.
+      - key: RUN_MIGRATIONS
+        value: "true"
+      # Render's proxy sets X-Forwarded-* headers; trust them for correct client info.
+      - key: FORWARDED_ALLOW_IPS
+        value: "*"
+
+databases:
+  - name: careerops-db
+    plan: free
+    region: frankfurt
+    databaseName: careerops
+    user: careerops_user
+    postgresMajorVersion: "18"
+    # Empty list = no access from outside Render. The API connects over Render's
+    # private network. Add your IP here temporarily if you need psql access.
+    ipAllowList: []
