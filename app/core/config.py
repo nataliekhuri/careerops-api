@@ -33,6 +33,26 @@ class Settings(BaseSettings):
     # requests can hang for minutes when the database is unreachable.
     db_connect_timeout: int = Field(default=5, ge=1, le=60)
 
+    # Authentication. The secret signs login tokens: keep it private, at least 32
+    # characters, and different in every environment. The API refuses to start
+    # without it (database migrations do not need it).
+    jwt_secret_key: SecretStr | None = None
+    access_token_expire_minutes: int = Field(default=60, ge=5, le=60 * 24)
+
+    # Browser origins allowed to call the API (comma-separated), e.g. the frontend URL.
+    cors_origins: str = ""
+
+    @property
+    def cors_origin_list(self) -> list[str]:
+        return [origin.strip().rstrip("/") for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @field_validator("jwt_secret_key")
+    @classmethod
+    def secret_must_be_long(cls, value: SecretStr | None) -> SecretStr | None:
+        if value is not None and len(value.get_secret_value()) < 32:
+            raise ValueError("JWT_SECRET_KEY must be at least 32 characters")
+        return value
+
     @field_validator("database_url_value")
     @classmethod
     def must_be_postgres_url(cls, value: SecretStr | None) -> SecretStr | None:

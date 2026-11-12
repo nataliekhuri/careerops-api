@@ -2,7 +2,7 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Response
 
-from app.api.deps import ApplicationOr404, DbSession
+from app.api.deps import ApplicationOr404, CurrentUser, DbSession
 from app.crud import application as crud
 from app.schemas.application import (
     ApplicationFilters,
@@ -20,18 +20,20 @@ TOTAL_COUNT_HEADER = {
 
 
 @router.post("", response_model=ApplicationMessage)
-def create_application(data: JobApplication, db: DbSession):
-    application = crud.create_application(db, data)
+def create_application(data: JobApplication, user: CurrentUser, db: DbSession):
+    application = crud.create_application(db, user.id, data)
     return {"message": "Application created successfully", "application": application}
 
 
 @router.get("", response_model=list[ApplicationRead], responses={200: {"headers": TOTAL_COUNT_HEADER}})
-def get_applications(response: Response, filters: Annotated[ApplicationFilters, Query()], db: DbSession):
-    """List applications with optional filters, sorting and pagination.
+def get_applications(
+    response: Response, filters: Annotated[ApplicationFilters, Query()], user: CurrentUser, db: DbSession
+):
+    """List the current user's applications with optional filters, sorting and pagination.
 
     The total number of matching applications is returned in the `X-Total-Count` header.
     """
-    items, total = crud.list_applications(db, filters)
+    items, total = crud.list_applications(db, user.id, filters)
     response.headers["X-Total-Count"] = str(total)
     return items
 

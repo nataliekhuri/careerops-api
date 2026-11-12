@@ -44,20 +44,26 @@ def test_unknown_status_returns_422(client, status):
     assert response.status_code == 422
 
 
-def test_database_rejects_invalid_status_even_without_the_api(db_session):
+def test_database_rejects_invalid_status_even_without_the_api(db_session, user):
     with pytest.raises(IntegrityError):
         db_session.execute(
             text(
-                "INSERT INTO applications (company, position, location, status, notes) VALUES ('A','B','C','Bogus','')"
-            )
+                "INSERT INTO applications (user_id, company, position, location, status, notes) "
+                "VALUES (:uid, 'A', 'B', 'C', 'Bogus', '')"
+            ),
+            {"uid": user.id},
         )
         db_session.flush()
     db_session.rollback()
 
 
-def test_database_default_status_is_applied(db_session):
+def test_database_default_status_is_applied(db_session, user):
     status = db_session.execute(
-        text("INSERT INTO applications (company, position, location, notes) VALUES ('A','B','C','') RETURNING status")
+        text(
+            "INSERT INTO applications (user_id, company, position, location, notes) "
+            "VALUES (:uid, 'A', 'B', 'C', '') RETURNING status"
+        ),
+        {"uid": user.id},
     ).scalar_one()
 
     assert status == "Applied"
@@ -247,12 +253,13 @@ def test_invalid_pagination_returns_422(client, params):
     assert client.get("/applications", params=params).status_code == 422
 
 
-def test_default_page_size_is_50(client, db_session):
+def test_default_page_size_is_50(client, db_session, user):
     db_session.execute(
         text(
-            "INSERT INTO applications (company, position, location, notes) "
-            "SELECT 'C' || g, 'Dev', 'Remote', '' FROM generate_series(1, 55) g"
-        )
+            "INSERT INTO applications (user_id, company, position, location, notes) "
+            "SELECT :uid, 'C' || g, 'Dev', 'Remote', '' FROM generate_series(1, 55) g"
+        ),
+        {"uid": user.id},
     )
 
     response = client.get("/applications")
