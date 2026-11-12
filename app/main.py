@@ -7,7 +7,7 @@ from app.api.routes import applications, health
 app = FastAPI(
     title="CareerOps API",
     description="An API to manage job applications",
-    version="1.1.0",
+    version="1.2.0",
 )
 
 app.include_router(health.router)
