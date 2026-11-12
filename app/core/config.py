@@ -1,6 +1,6 @@
 from functools import lru_cache
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy import URL
 
@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     db_name: str = "careerops"
     db_user: str = "careerops_user"
     db_password: SecretStr
+    # Seconds to wait for a database connection before failing. Without a limit,
+    # requests can hang for minutes when the database is unreachable.
+    db_connect_timeout: int = Field(default=5, ge=1, le=60)
 
     @property
     def database_url(self) -> URL:
@@ -26,6 +29,7 @@ class Settings(BaseSettings):
             host=self.db_host,
             port=self.db_port,
             database=self.db_name,
+            query={"connect_timeout": str(self.db_connect_timeout)},
         )
 
 
