@@ -8,7 +8,10 @@ export interface AuthState {
   isLoading: boolean
   login: (email: string, password: string) => Promise<void>
   register: (input: UserInput) => Promise<void>
-  logout: () => void
+  /** Sign out. `to` is where protected pages send the user afterwards (default: /login). */
+  logout: (to?: string) => void
+  /** Where to go after a deliberate sign-out, or null for the default. */
+  signedOutTo: string | null
 }
 
 export const AuthContext = createContext<AuthState | null>(null)
