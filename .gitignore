@@ -241,3 +241,6 @@ desktop.ini
 
 # Keep the example env template tracked (must stay last)
 !.env.example
+
+# The frontend has its own src/lib folder (the Python template above ignores lib/)
+!frontend/src/lib/

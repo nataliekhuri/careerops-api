@@ -14,3 +14,5 @@ tests
 Dockerfile
 docker-compose.yml
 .dockerignore
+frontend
+scripts/export_openapi.py
