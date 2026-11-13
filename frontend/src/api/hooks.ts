@@ -5,6 +5,9 @@ import type { paths } from './schema'
 import type {
   Application,
   ApplicationInput,
+  CareerProfileInput,
+  CvReviewRequest,
+  JobSource,
   ApplicationPatch,
   ApplicationStatus,
   CompanyInput,
@@ -26,6 +29,8 @@ export const keys = {
   board: ['applications', 'board'] as const,
   interviews: ['interviews'] as const,
   dashboard: ['dashboard'] as const,
+  careerProfile: ['career-profile'] as const,
+  ai: ['ai'] as const,
 }
 
 // ---------------------------------------------------------------- applications
@@ -141,6 +146,7 @@ function invalidateApplicationData(client: ReturnType<typeof useQueryClient>) {
   client.invalidateQueries({ queryKey: keys.companies })
   client.invalidateQueries({ queryKey: keys.dashboard })
   client.invalidateQueries({ queryKey: keys.interviews })
+  client.invalidateQueries({ queryKey: keys.ai })
 }
 
 // ---------------------------------------------------------------- dashboard
@@ -267,5 +273,77 @@ export function useChangePassword() {
 export function useDeleteAccount() {
   return useMutation({
     mutationFn: async (password: string) => unwrap(api.DELETE('/users/me', { body: { password } })),
+  })
+}
+
+// ------------------------------------------------------------------ AI assistant
+
+export function useCareerProfile() {
+  return useQuery({
+    queryKey: keys.careerProfile,
+    queryFn: async () => (await unwrap(api.GET('/users/me/career-profile'))).data,
+  })
+}
+
+export function useSaveCareerProfile() {
+  const client = useQueryClient()
+  return useMutation({
+    mutationFn: async (body: CareerProfileInput) => (await unwrap(api.PUT('/users/me/career-profile', { body }))).data,
+    onSuccess: (profile) => {
+      client.setQueryData(keys.careerProfile, profile)
+      client.invalidateQueries({ queryKey: keys.ai })
+    },
+  })
+}
+
+export function useAiProvider() {
+  return useQuery({
+    queryKey: [...keys.ai, 'provider'],
+    queryFn: async () => (await unwrap(api.GET('/ai/provider'))).data,
+    staleTime: Infinity,
+  })
+}
+
+export function useSkillInsights() {
+  return useQuery({
+    queryKey: [...keys.ai, 'skill-insights'],
+    queryFn: async () => (await unwrap(api.GET('/ai/skill-insights'))).data,
+  })
+}
+
+/** All four analyses for one job. `source` null = nothing requested yet. */
+export function useJobAnalysis(source: JobSource | null) {
+  return useQuery({
+    queryKey: [...keys.ai, 'job-analysis', source],
+    queryFn: async () => (await unwrap(api.POST('/ai/job-analysis', { body: source! }))).data,
+    enabled: source !== null,
+    retry: false,
+  })
+}
+
+export function useMatch(source: JobSource | null) {
+  return useQuery({
+    queryKey: [...keys.ai, 'match', source],
+    queryFn: async () => (await unwrap(api.POST('/ai/match', { body: source! }))).data,
+    enabled: source !== null,
+    retry: false,
+  })
+}
+
+export function useCvReview(request: CvReviewRequest | null) {
+  return useQuery({
+    queryKey: [...keys.ai, 'cv-review', request],
+    queryFn: async () => (await unwrap(api.POST('/ai/cv-review', { body: request! }))).data,
+    enabled: request !== null,
+    retry: false,
+  })
+}
+
+export function useInterviewPrep(source: JobSource | null) {
+  return useQuery({
+    queryKey: [...keys.ai, 'interview-prep', source],
+    queryFn: async () => (await unwrap(api.POST('/ai/interview-prep', { body: source! }))).data,
+    enabled: source !== null,
+    retry: false,
   })
 }

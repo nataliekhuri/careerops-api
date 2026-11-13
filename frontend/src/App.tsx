@@ -26,6 +26,7 @@ const BoardPage = lazy(() => import('@/pages/board/BoardPage').then((m) => ({ de
 const InterviewsPage = lazy(() =>
   import('@/pages/interviews/InterviewsPage').then((m) => ({ default: m.InterviewsPage })),
 )
+const AssistantPage = lazy(() => import('@/pages/assistant/AssistantPage').then((m) => ({ default: m.AssistantPage })))
 const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const CompanyDetailPage = lazy(() =>
   import('@/pages/companies/CompanyDetailPage').then((m) => ({ default: m.CompanyDetailPage })),
@@ -46,6 +47,7 @@ export function App() {
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/board" element={<BoardPage />} />
               <Route path="/interviews" element={<InterviewsPage />} />
+              <Route path="/assistant" element={<AssistantPage />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/applications/new" element={<NewApplicationPage />} />

@@ -56,6 +56,8 @@ class Application(Base):
     )
     location: Mapped[str] = mapped_column(String(255))
     notes: Mapped[str] = mapped_column(Text, default="")
+    # The job posting, used by the AI assistant. Empty when not provided.
+    job_description: Mapped[str] = mapped_column(Text, default="", server_default="")
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     # clock_timestamp() (not now()) so the value reflects the moment of the change.

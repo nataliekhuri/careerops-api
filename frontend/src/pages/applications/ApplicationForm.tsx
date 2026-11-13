@@ -17,10 +17,11 @@ const schema = z.object({
   status: z.enum(APPLICATION_STATUSES),
   company_id: z.string(),
   notes: z.string().trim().max(5000, 'Use at most 5000 characters'),
+  job_description: z.string().trim().max(20000, 'Use at most 20,000 characters'),
 })
 type Values = z.infer<typeof schema>
 
-const FIELDS = ['company', 'position', 'location', 'status', 'company_id', 'notes'] as const
+const FIELDS = ['company', 'position', 'location', 'status', 'company_id', 'notes', 'job_description'] as const
 
 interface ApplicationFormProps {
   initial?: Application
@@ -40,6 +41,7 @@ export function ApplicationForm({ initial, submitLabel, onSubmit, onCancel }: Ap
       status: initial?.status ?? 'Applied',
       company_id: initial?.company_id ? String(initial.company_id) : '',
       notes: initial?.notes ?? '',
+      job_description: initial?.job_description ?? '',
     },
   })
   const { errors, isSubmitting } = form.formState
@@ -110,6 +112,14 @@ export function ApplicationForm({ initial, submitLabel, onSubmit, onCancel }: Ap
         </Field>
         <Field label="Notes" error={errors.notes?.message} className="sm:col-span-2">
           {(props) => <Textarea {...props} {...form.register('notes')} />}
+        </Field>
+        <Field
+          label="Job description (optional)"
+          error={errors.job_description?.message}
+          hint="Paste the job posting. The AI assistant uses it to match your skills and prepare you for interviews."
+          className="sm:col-span-2"
+        >
+          {(props) => <Textarea rows={8} {...props} {...form.register('job_description')} />}
         </Field>
       </div>
       <div className="flex justify-end gap-3">

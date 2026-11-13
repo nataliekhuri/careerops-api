@@ -5,7 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.errors import register_error_handlers
-from app.api.routes import applications, auth, companies, dashboard, health, interviews
+from app.api.routes import ai, applications, auth, companies, dashboard, health, interviews
 from app.core.config import get_settings
 
 # The database schema is managed by Alembic migrations: run `alembic upgrade head`.
@@ -24,7 +24,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CareerOps API",
     description="Track job applications. Register, log in, then use the bearer token on every request.",
-    version="2.1.0",
+    version="2.2.0",
     lifespan=lifespan,
 )
 
@@ -47,3 +47,5 @@ app.include_router(applications.router)
 app.include_router(companies.router)
 app.include_router(interviews.router)
 app.include_router(dashboard.router)
+app.include_router(ai.profile_router)
+app.include_router(ai.router)

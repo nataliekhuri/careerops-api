@@ -12,6 +12,8 @@ import { Card, PageHeader } from '@/components/ui/Card'
 import { Field, Input } from '@/components/ui/Field'
 import { formatDate } from '@/lib/format'
 
+import { CareerProfileForm } from './CareerProfileForm'
+
 const newPassword = z
   .string()
   .min(8, 'Use at least 8 characters')
@@ -184,11 +186,19 @@ function DeleteAccount() {
 export function SettingsPage() {
   return (
     <>
-      <PageHeader title="Settings" description="Manage your profile, password and account." />
+      <PageHeader title="Settings" description="Manage your profile, career profile, password and account." />
       <div className="space-y-6">
         <Section title="Profile" description="How your name appears in CareerOps.">
           <ProfileForm />
         </Section>
+        <div id="career-profile" className="scroll-mt-6">
+          <Section
+            title="Career profile"
+            description="Your skills, experience and CV. The AI assistant uses them to score job matches and review your CV."
+          >
+            <CareerProfileForm />
+          </Section>
+        </div>
         <Section title="Password" description="Use a long password you don't use anywhere else.">
           <PasswordForm />
         </Section>
