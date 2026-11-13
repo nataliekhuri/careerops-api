@@ -10,6 +10,7 @@ import {
   LogOut,
   Menu as MenuIcon,
   Settings,
+  Sparkles,
   X,
 } from 'lucide-react'
 import { useState } from 'react'
@@ -26,6 +27,7 @@ const NAV = [
   { to: '/board', label: 'Board', icon: KanbanSquare },
   { to: '/interviews', label: 'Interviews', icon: CalendarDays },
   { to: '/companies', label: 'Companies', icon: Building2 },
+  { to: '/assistant', label: 'AI assistant', icon: Sparkles },
   { to: '/settings', label: 'Settings', icon: Settings },
 ]
 

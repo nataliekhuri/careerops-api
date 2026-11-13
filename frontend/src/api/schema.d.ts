@@ -21,6 +21,126 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/ai/cv-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Review Cv
+         * @description Suggestions to improve your CV, optionally tailored to one job.
+         */
+        post: operations["review_cv_ai_cv_review_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/interview-prep": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Interview Prep
+         * @description Role-specific questions, your skill gaps, questions to ask and company research for one job.
+         */
+        post: operations["interview_prep_ai_interview_prep_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/job-analysis": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Analyze Job
+         * @description Extract skills (required vs. nice-to-have), seniority, experience and work mode from a job description.
+         */
+        post: operations["analyze_job_ai_job_analysis_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/match": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Match Job
+         * @description Score how well your career profile fits a job (0-100), with the reasons and what to improve.
+         */
+        post: operations["match_job_ai_match_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/provider": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Provider Info
+         * @description Which analyzer answers requests. The default built-in one is free and keeps data on this server.
+         */
+        get: operations["provider_info_ai_provider_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/skill-insights": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Skill Insights
+         * @description Which skills your saved job descriptions ask for most, and how many of them you cover.
+         */
+        get: operations["skill_insights_ai_skill_insights_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/applications": {
         parameters: {
             query?: never;
@@ -281,6 +401,30 @@ export interface paths {
         patch: operations["update_me_users_me_patch"];
         trace?: never;
     };
+    "/users/me/career-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read Career Profile
+         * @description Your career profile (empty until you save one).
+         */
+        get: operations["read_career_profile_users_me_career_profile_get"];
+        /**
+         * Save Career Profile
+         * @description Create or replace your career profile.
+         */
+        put: operations["save_career_profile_users_me_career_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/me/password": {
         parameters: {
             query?: never;
@@ -335,6 +479,8 @@ export interface components {
             created_at: string;
             /** Id */
             id: number;
+            /** Job Description */
+            job_description: string;
             /** Location */
             location: string;
             /** Notes */
@@ -382,6 +528,8 @@ export interface components {
              * @description Send null to unlink the company
              */
             company_id?: number | null;
+            /** Job Description */
+            job_description?: string | null;
             /** Location */
             location?: string | null;
             /** Notes */
@@ -413,6 +561,71 @@ export interface components {
             scope: string;
             /** Username */
             username: string;
+        };
+        /** CareerProfileRead */
+        CareerProfileRead: {
+            /** Cv Text */
+            cv_text: string;
+            /** Headline */
+            headline: string;
+            /**
+             * Recognized Skills
+             * @description Skills the assistant understands (from skills and CV)
+             */
+            recognized_skills: string[];
+            /** Skills */
+            skills: string[];
+            /** Target Role */
+            target_role: string;
+            /**
+             * Unrecognized Skills
+             * @description Entered skills that are not in the skill list (not scored)
+             */
+            unrecognized_skills: string[];
+            /**
+             * Updated At
+             * @description null until the profile is saved for the first time
+             */
+            updated_at: string | null;
+            /** Years Experience */
+            years_experience: number | null;
+        };
+        /**
+         * CareerProfileUpdate
+         * @description Your career profile (replaces the stored one). Used by the AI assistant only.
+         * @example {
+         *       "cv_text": "Experience\n- Built a FastAPI service...",
+         *       "headline": "Backend developer",
+         *       "skills": [
+         *         "Python",
+         *         "FastAPI",
+         *         "PostgreSQL",
+         *         "Docker"
+         *       ],
+         *       "target_role": "Backend Engineer",
+         *       "years_experience": 3
+         *     }
+         */
+        CareerProfileUpdate: {
+            /**
+             * Cv Text
+             * @default
+             */
+            cv_text: string;
+            /**
+             * Headline
+             * @default
+             */
+            headline: string;
+            /** Skills */
+            skills?: string[];
+            /**
+             * Target Role
+             * @default
+             */
+            target_role: string;
+            /** Years Experience */
+            years_experience?: number | null;
         };
         /** CompanyCount */
         CompanyCount: {
@@ -506,6 +719,68 @@ export interface components {
             /** Website */
             website?: string | null;
         };
+        /** CvCheck */
+        CvCheck: {
+            /** Detail */
+            detail: string;
+            /** Name */
+            name: string;
+            /** Passed */
+            passed: boolean;
+        };
+        /** CvReview */
+        CvReview: {
+            /** Checks */
+            checks: components["schemas"]["CvCheck"][];
+            /** @description Only when reviewed against a job */
+            keyword_coverage: components["schemas"]["KeywordCoverage"] | null;
+            /**
+             * Score
+             * @description Share of checks passed (0-100), or null without a CV
+             */
+            score: number | null;
+            /** Sections Found */
+            sections_found: string[];
+            /** Suggestions */
+            suggestions: components["schemas"]["CvSuggestion"][];
+            /** Word Count */
+            word_count: number;
+        };
+        /**
+         * CvReviewRequest
+         * @description Review a CV, optionally against a job. The CV defaults to the one in your career profile.
+         */
+        CvReviewRequest: {
+            /**
+             * Application Id
+             * @description Tailor the review to this application
+             */
+            application_id?: number | null;
+            /**
+             * Cv Text
+             * @description CV text; defaults to your career profile CV
+             */
+            cv_text?: string | null;
+            /**
+             * Job Description
+             * @description ...or to this job description
+             */
+            job_description?: string | null;
+            /** Position */
+            position?: string | null;
+        };
+        /** CvSuggestion */
+        CvSuggestion: {
+            /** Category */
+            category: string;
+            /** Detail */
+            detail: string;
+            /** Example */
+            example?: string | null;
+            priority: components["schemas"]["Priority"];
+            /** Title */
+            title: string;
+        };
         /** DashboardStats */
         DashboardStats: {
             /**
@@ -544,6 +819,11 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /**
+         * Importance
+         * @enum {string}
+         */
+        Importance: "required" | "nice_to_have";
         /**
          * InterviewCreate
          * @example {
@@ -597,6 +877,36 @@ export interface components {
          * @enum {string}
          */
         InterviewOutcome: "pending" | "passed" | "failed" | "cancelled";
+        /** InterviewPrep */
+        InterviewPrep: {
+            /** Behavioral Questions */
+            behavioral_questions: components["schemas"]["PrepQuestion"][];
+            /** Company */
+            company: string | null;
+            /** Company Research */
+            company_research: string[];
+            /** Focus Skills */
+            focus_skills: string[];
+            /**
+             * Gap Questions
+             * @description Required skills missing from your profile
+             */
+            gap_questions: components["schemas"]["PrepQuestion"][];
+            /** Questions To Ask */
+            questions_to_ask: string[];
+            /** Role Family */
+            role_family: string;
+            /** Seniority */
+            seniority: string;
+            /** Technical Questions */
+            technical_questions: components["schemas"]["PrepQuestion"][];
+            /** Tips */
+            tips: string[];
+            /** Title */
+            title: string;
+            /** Upcoming Interviews */
+            upcoming_interviews: components["schemas"]["UpcomingInterview"][];
+        };
         /** InterviewRead */
         InterviewRead: {
             application: components["schemas"]["ApplicationSummary"];
@@ -653,6 +963,40 @@ export interface components {
             /** Scheduled At */
             scheduled_at?: string | null;
         };
+        /** JobAnalysis */
+        JobAnalysis: {
+            /** Min Years Experience */
+            min_years_experience: number | null;
+            /** Nice To Have Skills */
+            nice_to_have_skills: string[];
+            /** Required Skills */
+            required_skills: string[];
+            /**
+             * Role Family
+             * @description backend, frontend, fullstack, data, ml, devops, mobile, qa, security or general
+             */
+            role_family: string;
+            /** Seniority */
+            seniority: string;
+            /**
+             * Skills
+             * @description Required skills first, then by mentions
+             */
+            skills: components["schemas"]["JobSkill"][];
+            /** Summary */
+            summary: string;
+            /** Title */
+            title: string;
+            /** Warnings */
+            warnings: string[];
+            /** Word Count */
+            word_count: number;
+            /**
+             * Work Modes
+             * @description remote, hybrid and/or on-site, as mentioned
+             */
+            work_modes: string[];
+        };
         /**
          * JobApplication
          * @description Request body for creating or fully replacing an application (POST, PUT).
@@ -676,6 +1020,12 @@ export interface components {
              */
             company_id?: number | null;
             /**
+             * Job Description
+             * @description The job posting (used by the AI assistant)
+             * @default
+             */
+            job_description: string;
+            /**
              * Location
              * @description City, country or 'Remote'
              */
@@ -697,12 +1047,132 @@ export interface components {
              */
             status: components["schemas"]["ApplicationStatus"];
         };
+        /** JobSkill */
+        JobSkill: {
+            /** Category */
+            category: string;
+            /**
+             * Evidence
+             * @description The line of the job description where it was found
+             */
+            evidence: string;
+            importance: components["schemas"]["Importance"];
+            /**
+             * Mentions
+             * @description How often the skill is mentioned
+             */
+            mentions: number;
+            /** Name */
+            name: string;
+        };
+        /**
+         * JobSource
+         * @description Which job to analyse: one of your saved applications, or a pasted job description.
+         * @example {
+         *       "application_id": 12
+         *     }
+         * @example {
+         *       "job_description": "We are hiring a Backend Engineer. Requirements: Python, FastAPI, PostgreSQL..."
+         *     }
+         */
+        JobSource: {
+            /**
+             * Application Id
+             * @description One of your applications
+             */
+            application_id?: number | null;
+            /**
+             * Job Description
+             * @description Pasted job description
+             */
+            job_description?: string | null;
+            /**
+             * Position
+             * @description Job title for a pasted description (optional)
+             */
+            position?: string | null;
+        };
+        /** KeywordCoverage */
+        KeywordCoverage: {
+            /** Missing */
+            missing: string[];
+            /** Percent */
+            percent: number;
+            /** Present */
+            present: string[];
+        };
+        /** MatchResult */
+        MatchResult: {
+            /** Components */
+            components: components["schemas"]["ScoreComponent"][];
+            /** Explanation */
+            explanation: string[];
+            job: components["schemas"]["JobAnalysis"];
+            /** Level */
+            level: string;
+            /** Matched */
+            matched: components["schemas"]["MatchedSkill"][];
+            /** Missing */
+            missing: components["schemas"]["MatchedSkill"][];
+            /** Partial */
+            partial: components["schemas"]["MatchedSkill"][];
+            /** Recommendations */
+            recommendations: string[];
+            /**
+             * Score
+             * @description 0-100, or null when there is not enough information
+             */
+            score: number | null;
+        };
+        /** MatchedSkill */
+        MatchedSkill: {
+            /** Category */
+            category: string;
+            /**
+             * Credit
+             * @description 1 = you have it, 0.5 = related experience, 0 = missing
+             */
+            credit: number;
+            importance: components["schemas"]["Importance"];
+            /** Name */
+            name: string;
+            /** Reason */
+            reason: string;
+        };
         /** PasswordChange */
         PasswordChange: {
             /** Current Password */
             current_password: string;
             /** New Password */
             new_password: string;
+        };
+        /** PrepQuestion */
+        PrepQuestion: {
+            /** Question */
+            question: string;
+            /** Tip */
+            tip: string;
+            /** Topic */
+            topic: string;
+        };
+        /**
+         * Priority
+         * @enum {string}
+         */
+        Priority: "high" | "medium" | "low";
+        /** ProviderInfo */
+        ProviderInfo: {
+            /** Cost */
+            cost: string;
+            /** Description */
+            description: string;
+            /**
+             * External
+             * @description Whether requests leave this server
+             */
+            external: boolean;
+            /** Name */
+            name: string;
         };
         /**
          * Rates
@@ -725,6 +1195,59 @@ export interface components {
              */
             response_rate: number;
         };
+        /** ScoreComponent */
+        ScoreComponent: {
+            /** Detail */
+            detail: string;
+            /** Name */
+            name: string;
+            /**
+             * Score
+             * @description 0-100 for this component
+             */
+            score: number;
+            /**
+             * Weight
+             * @description Share of the total score, in percent
+             */
+            weight: number;
+        };
+        /** SkillDemand */
+        SkillDemand: {
+            /**
+             * Applications
+             * @description How many of your job descriptions require it
+             */
+            applications: number;
+            /** Category */
+            category: string;
+            /** Have */
+            have: boolean;
+            /** Name */
+            name: string;
+        };
+        /** SkillInsights */
+        SkillInsights: {
+            /**
+             * Analyzed Applications
+             * @description Applications with a job description
+             */
+            analyzed_applications: number;
+            /**
+             * Coverage Percent
+             * @description Share of required skill demand you cover
+             */
+            coverage_percent: number | null;
+            /**
+             * Skills
+             * @description Most requested first (top 25)
+             */
+            skills: components["schemas"]["SkillDemand"][];
+            /** Top Missing */
+            top_missing: string[];
+            /** Total Applications */
+            total_applications: number;
+        };
         /**
          * SortField
          * @description Allowed values for the `sort` query parameter ('-' prefix = descending).
@@ -745,6 +1268,19 @@ export interface components {
              * @default bearer
              */
             token_type: string;
+        };
+        /** UpcomingInterview */
+        UpcomingInterview: {
+            /** Id */
+            id: number;
+            interview_type: components["schemas"]["InterviewType"];
+            /** Interviewer */
+            interviewer: string;
+            /**
+             * Scheduled At
+             * Format: date-time
+             */
+            scheduled_at: string;
         };
         /**
          * UserCreate
@@ -843,6 +1379,178 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    review_cv_ai_cv_review_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CvReviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CvReview"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    interview_prep_ai_interview_prep_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobSource"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InterviewPrep"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    analyze_job_ai_job_analysis_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobSource"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JobAnalysis"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    match_job_ai_match_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JobSource"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MatchResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    provider_info_ai_provider_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderInfo"];
+                };
+            };
+        };
+    };
+    skill_insights_ai_skill_insights_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SkillInsights"];
                 };
             };
         };
@@ -1600,6 +2308,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UserRead"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    read_career_profile_users_me_career_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerProfileRead"];
+                };
+            };
+        };
+    };
+    save_career_profile_users_me_career_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CareerProfileUpdate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CareerProfileRead"];
                 };
             };
             /** @description Validation Error */

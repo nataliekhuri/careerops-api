@@ -222,3 +222,54 @@ def test_companies_migration_downgrade_keeps_applications():
         tables = set(inspect(conn).get_table_names())
         assert "companies" not in tables and "interviews" not in tables
         assert conn.execute(text("SELECT notes FROM applications")).scalars().all() == ["keep me"]
+
+
+# ---------------------------------------------- career profiles migration (66ff5fb506ac)
+
+CAREER = "66ff5fb506ac"
+
+
+def test_career_migration_keeps_applications_and_gives_them_empty_descriptions():
+    with throwaway_schema("test_careerops_mig_m5") as engine, engine.connect() as conn:
+        migrations.upgrade(conn, COMPANIES)
+        conn.commit()
+        user_id, app_id = _user_with_application(conn)
+
+        migrations.upgrade(conn, CAREER)
+        conn.commit()
+
+        row = conn.execute(
+            text("SELECT company, notes, status, job_description FROM applications WHERE id = :i"), {"i": app_id}
+        ).one()
+        assert tuple(row) == ("Acme", "keep me", "Interview", "")
+        conn.execute(text("INSERT INTO career_profiles (user_id) VALUES (:u)"), {"u": user_id})
+        conn.commit()
+        profile = conn.execute(text("SELECT skills, cv_text, years_experience FROM career_profiles")).one()
+        assert tuple(profile) == ([], "", None)
+
+        # One profile per user, and years must be sensible.
+        with pytest.raises(DBAPIError):
+            conn.execute(text("INSERT INTO career_profiles (user_id) VALUES (:u)"), {"u": user_id})
+        conn.rollback()
+        with pytest.raises(DBAPIError, match="ck_career_profiles_years_experience"):
+            conn.execute(text("UPDATE career_profiles SET years_experience = 99 WHERE user_id = :u"), {"u": user_id})
+        conn.rollback()
+
+
+def test_career_migration_downgrade_keeps_applications():
+    with throwaway_schema("test_careerops_mig_m5_down") as engine, engine.connect() as conn:
+        migrations.upgrade(conn, CAREER)
+        conn.commit()
+        user_id, _ = _user_with_application(conn)
+        conn.execute(text("UPDATE applications SET job_description = 'Python'"))
+        conn.execute(text("INSERT INTO career_profiles (user_id, skills) VALUES (:u, '[\"Python\"]')"), {"u": user_id})
+        conn.commit()
+
+        migrations.downgrade(conn, COMPANIES)
+        conn.commit()
+
+        assert _revision(conn) == COMPANIES
+        assert "career_profiles" not in inspect(conn).get_table_names()
+        columns = {c["name"] for c in inspect(conn).get_columns("applications")}
+        assert "job_description" not in columns
+        assert conn.execute(text("SELECT notes FROM applications")).scalars().all() == ["keep me"]
