@@ -2,7 +2,8 @@
 
 [![CI](https://github.com/nataliekhuri/careerops-api/actions/workflows/ci.yml/badge.svg)](https://github.com/nataliekhuri/careerops-api/actions/workflows/ci.yml)
 
-A REST API for tracking job applications, built with FastAPI.
+A full-stack app for tracking job applications: a **FastAPI + PostgreSQL** backend and a
+**React + TypeScript** frontend.
 
 Data is stored in **PostgreSQL**, so applications persist across server restarts.
 
@@ -61,10 +62,18 @@ tests/
 ├── test_migrations.py       # migrations match the models, handle data, are reversible
 ├── test_config.py           # DB_* and DATABASE_URL settings
 └── test_deploy_config.py    # render.yaml sanity checks
-scripts/start.sh             # container start: optional migrations, then the API
+scripts/
+├── start.sh                 # container start: optional migrations, then the API
+└── export_openapi.py        # writes frontend/openapi.json for type generation
+frontend/                    # React + TypeScript web app (see "Frontend" below)
+├── src/api/                 # typed API client, generated schema types, data hooks
+├── src/auth/                # token storage, auth context, protected routes
+├── src/components/          # design system (buttons, fields, dialogs, badges …)
+├── src/layouts/             # app shell with responsive navigation
+└── src/pages/               # landing, auth, applications, companies
 Dockerfile                   # production image (non-root, honours $PORT)
 docker-compose.yml           # db + migrate + api for local use
-.github/workflows/ci.yml     # lint, tests on PostgreSQL 18, Docker build + smoke test
+.github/workflows/ci.yml     # backend lint/tests, frontend checks, Docker build + smoke test
 render.yaml                  # Render Blueprint (free web service + free PostgreSQL)
 ```
 
@@ -233,6 +242,52 @@ Example request body for `POST /applications`:
   "notes": "Referred by a former colleague"
 }
 ```
+
+## Frontend
+
+A React single-page app in [`frontend/`](frontend/) that uses the real API.
+
+| Area | What it does |
+|---|---|
+| Landing | Product overview with sign-up / sign-in |
+| Auth | Register and sign in (same validation rules as the API); expired or rejected sessions sign you out |
+| Applications | Table with search, status filter, sorting and pagination (kept in the URL); create, view, edit, quick status change, delete with confirmation; link to a saved company |
+| Companies | Card list with search, sorting and pagination; create, edit, delete; each company shows its linked applications |
+| Layout | Responsive sidebar / mobile drawer, user menu, skip link, accessible dialogs |
+
+**Stack:** React 19, TypeScript, Vite, Tailwind CSS v4, React Router, TanStack Query,
+React Hook Form + Zod, Radix UI primitives, Lucide icons, Sonner toasts.
+Tests use Vitest, Testing Library and MSW (network-level API mocks).
+
+**Type-safe API client:** request and response types are generated from the backend's
+OpenAPI document, so a backend change that breaks the frontend fails the type check:
+
+```bash
+python scripts/export_openapi.py          # backend → frontend/openapi.json
+cd frontend && npm run gen:api             # → src/api/schema.d.ts
+```
+
+CI re-runs both and fails if the committed files are out of date.
+
+### Run it locally
+
+With the API running on `http://127.0.0.1:8000` (see "Getting Started"):
+
+```bash
+cd frontend
+npm install
+npm run dev            # http://localhost:5173 — /api is proxied to the API, no CORS setup needed
+```
+
+| Command | Purpose |
+|---|---|
+| `npm run dev` | Development server with hot reload |
+| `npm test` | Unit and integration tests |
+| `npm run lint` / `npm run format:check` / `npm run typecheck` | Code quality |
+| `npm run build` | Production build into `frontend/dist` |
+
+For a deployed frontend, set `VITE_API_URL` to the API's URL at build time and add the
+frontend's URL to the API's `CORS_ORIGINS`.
 
 ## Quick Start with Docker
 
@@ -442,12 +497,14 @@ This project is in early development.
 - [x] Continuous integration with GitHub Actions (lint, tests, Docker smoke test)
 - [x] Linting and formatting with Ruff
 - [x] Docker image and Docker Compose setup
+- [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
+- [x] React + TypeScript frontend: landing, auth, applications, companies (typed API client)
 
 **Planned (not yet implemented)**
 
-- [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
-- [ ] React + TypeScript frontend
+- [ ] Frontend: dashboard charts, Kanban board, interview calendar, profile and settings
 - [ ] AI career assistant
+- [ ] Frontend deployment (Render static site)
 
 ## License
 

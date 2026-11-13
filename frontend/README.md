@@ -1,32 +1,27 @@
-# React + TypeScript + Vite
+# CareerOps frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+React + TypeScript single-page app for [CareerOps](../README.md). It talks to the FastAPI
+backend through a client whose types are generated from the backend's OpenAPI document.
 
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev        # http://localhost:5173 (expects the API on http://127.0.0.1:8000)
+npm test           # Vitest + Testing Library + MSW
+npm run build      # production build in dist/
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+- `src/api/` — `schema.d.ts` (generated, do not edit), `client.ts` (fetch client, auth
+  header, error handling), `hooks.ts` (TanStack Query hooks)
+- `src/auth/` — token storage, `AuthProvider`, route guards
+- `src/components/` — design system
+- `src/pages/` — screens
+- `src/test/` — MSW server, fixtures and render helpers
+
+Regenerate API types after a backend change:
+
+```bash
+python ../scripts/export_openapi.py && npm run gen:api
+```
+
+Configuration: `VITE_API_URL` (see `.env.example`). In development it defaults to `/api`,
+which Vite proxies to the backend.
