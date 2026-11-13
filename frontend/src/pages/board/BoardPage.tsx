@@ -3,6 +3,7 @@ import {
   type DragEndEvent,
   DragOverlay,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
   KeyboardSensor,
   PointerSensor,
   TouchSensor,
@@ -36,6 +37,24 @@ const COLUMN_ACCENT: Record<ApplicationStatus, string> = {
   Offer: 'border-t-emerald-500',
   Rejected: 'border-t-rose-500',
   Withdrawn: 'border-t-slate-400',
+}
+
+/**
+ * Keyboard dragging: Left/Right jump a whole column (the default moves 25px per press,
+ * which never reaches the next column). Up/Down do nothing because order is not stored.
+ */
+const columnKeyboardCoordinates: KeyboardCoordinateGetter = (event, { context, currentCoordinates }) => {
+  const step = event.code === 'ArrowRight' ? 1 : event.code === 'ArrowLeft' ? -1 : 0
+  if (step === 0) return undefined
+  event.preventDefault()
+  const from = (context.over?.id ?? (context.active?.data.current?.application as Application | undefined)?.status) as
+    ApplicationStatus | undefined
+  const index = from ? APPLICATION_STATUSES.indexOf(from) : -1
+  const target = APPLICATION_STATUSES[index + step]
+  const rect = target && context.droppableRects.get(target)
+  if (!rect) return currentCoordinates
+  const width = context.collisionRect?.width ?? 0
+  return { x: rect.left + (rect.width - width) / 2, y: currentCoordinates.y }
 }
 
 function CardBody({ application }: { application: Application }) {
@@ -83,7 +102,7 @@ function BoardCard({
         </Link>
       </div>
       <label className="mt-2 flex items-center gap-2 text-xs text-slate-500">
-        <span>Move to</span>
+        <span className="whitespace-nowrap">Move to</span>
         <select
           className="h-7 flex-1 rounded-md border-0 bg-slate-50 px-2 text-xs text-slate-700 ring-1 ring-inset ring-slate-200 focus:ring-2 focus:ring-brand-500"
           value={application.status}
@@ -116,7 +135,7 @@ function Column({
       ref={setNodeRef}
       aria-labelledby={`column-${status}`}
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-slate-100/70 p-3 transition-colors lg:w-auto lg:min-w-0',
+        'flex w-72 shrink-0 flex-col rounded-xl border-t-4 bg-slate-100/70 p-3 transition-colors',
         COLUMN_ACCENT[status],
         isOver && 'bg-brand-50 ring-2 ring-brand-300',
       )}
@@ -151,7 +170,7 @@ export function BoardPage() {
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 6 } }),
-    useSensor(KeyboardSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: columnKeyboardCoordinates }),
   )
 
   function moveTo(application: Application, status: ApplicationStatus) {
@@ -219,8 +238,8 @@ export function BoardPage() {
             },
           }}
         >
-          <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-            <div className="flex gap-4 lg:grid lg:grid-cols-6">
+          <div className="-mx-4 overflow-x-auto px-4 pb-4 sm:-mx-6 sm:px-6">
+            <div className="flex gap-4">
               {APPLICATION_STATUSES.map((status) => (
                 <Column key={status} status={status} items={data.filter((a) => a.status === status)} onMove={moveTo} />
               ))}
