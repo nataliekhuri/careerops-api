@@ -37,7 +37,7 @@ export function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const from = (location.state as { from?: string } | null)?.from ?? '/applications'
+  const from = (location.state as { from?: string } | null)?.from ?? '/dashboard'
   const form = useForm<LoginValues>({ resolver: zodResolver(loginSchema), defaultValues: { email: '', password: '' } })
   const { errors, isSubmitting } = form.formState
 
@@ -108,7 +108,7 @@ export function RegisterPage() {
     try {
       await createAccount(values)
       toast.success('Welcome to CareerOps!')
-      navigate('/applications', { replace: true })
+      navigate('/dashboard', { replace: true })
     } catch (error) {
       if (error instanceof ApiError && error.fieldErrors.length) {
         for (const { field, message } of error.fieldErrors) {

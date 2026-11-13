@@ -1,3 +1,6 @@
+// Load the lazily routed page while the file is collected, so the first test measures
+// behaviour rather than cold module compilation.
+import '@/pages/applications/ApplicationsPage'
 import { screen, waitFor, within } from '@testing-library/react'
 import { http, HttpResponse } from 'msw'
 import { describe, expect, test } from 'vitest'
