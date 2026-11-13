@@ -2,6 +2,7 @@ import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router'
 
 import { RedirectIfAuthenticated, RequireAuth } from '@/auth/RequireAuth'
+import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { Landing } from '@/pages/Landing'
 import { NotFound } from '@/pages/NotFound'
@@ -26,24 +27,26 @@ const CompanyDetailPage = lazy(() =>
 
 export function App() {
   return (
-    <Suspense fallback={<FullPageSpinner label="Loading" />}>
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route element={<RedirectIfAuthenticated />}>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-        </Route>
-        <Route element={<RequireAuth />}>
-          <Route element={<AppLayout />}>
-            <Route path="/applications" element={<ApplicationsPage />} />
-            <Route path="/applications/new" element={<NewApplicationPage />} />
-            <Route path="/applications/:id" element={<ApplicationDetailPage />} />
-            <Route path="/companies" element={<CompaniesPage />} />
-            <Route path="/companies/:id" element={<CompanyDetailPage />} />
+    <ErrorBoundary>
+      <Suspense fallback={<FullPageSpinner label="Loading" />}>
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route element={<RedirectIfAuthenticated />}>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
           </Route>
-        </Route>
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Suspense>
+          <Route element={<RequireAuth />}>
+            <Route element={<AppLayout />}>
+              <Route path="/applications" element={<ApplicationsPage />} />
+              <Route path="/applications/new" element={<NewApplicationPage />} />
+              <Route path="/applications/:id" element={<ApplicationDetailPage />} />
+              <Route path="/companies" element={<CompaniesPage />} />
+              <Route path="/companies/:id" element={<CompanyDetailPage />} />
+            </Route>
+          </Route>
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
+    </ErrorBoundary>
   )
 }
