@@ -6,7 +6,7 @@ Status as of 13 November 2026.
 - **Ready** = built, tested and green in CI, waiting in an open pull request for review.
 - **Planned** = not built yet.
 
-Pull requests are stacked: #8 → #9 → #10 → M5. Each one only shows its own changes.
+Pull requests are stacked: #8 → #9 → #10 → #11. Each one only shows its own changes.
 
 ## Summary
 
@@ -17,7 +17,7 @@ Pull requests are stacked: #8 → #9 → #10 → M5. Each one only shows its own
 | M2 | Companies, interviews, dashboard statistics API | #8 | `e1ea5f0b4a8d` (approval needed) | Ready |
 | M3 | React frontend: auth, applications, companies | #9 | none | Ready |
 | M4 | Dashboard charts, Kanban board, interview calendar, settings | #10 | none | Ready |
-| M5 | AI career assistant | M5 PR | `66ff5fb506ac` (approval needed) | Ready |
+| M5 | AI career assistant | #11 | `66ff5fb506ac` (approval needed) | Ready |
 | M6 | Public frontend launch | — | none | Planned ([launch plan](LAUNCH_PLAN.md)) |
 
 ## Backend API
@@ -30,8 +30,8 @@ Pull requests are stacked: #8 → #9 → #10 → M5. Each one only shows its own
 - [x] Companies linked to applications (**Ready**, #8)
 - [x] Interviews with calendar ranges and outcomes; database-enforced same owner as the application (**Ready**, #8)
 - [x] Dashboard statistics: totals, rates, 12-week activity, top companies, upcoming interviews (**Ready**, #8)
-- [x] Job descriptions on applications (**Ready**, M5)
-- [x] Career profile: skills, experience, target role, CV text (**Ready**, M5)
+- [x] Job descriptions on applications (**Ready**, #11)
+- [x] Career profile: skills, experience, target role, CV text (**Ready**, #11)
 - [ ] Login rate limiting / brute-force protection (**Planned**: recommended before a public launch)
 - [ ] Email verification and password reset by email (**Planned**: needs an email provider)
 
@@ -56,7 +56,7 @@ Pull requests are stacked: #8 → #9 → #10 → M5. Each one only shows its own
 - [x] Kanban board: drag with mouse, touch or keyboard, or "Move to"; optimistic update with rollback (**Ready**, #10)
 - [x] Interview calendar: month grid, day list, schedule / edit / outcome / delete, time-zone safe (**Ready**, #10)
 - [x] Settings: profile, password, account deletion (**Ready**, #10)
-- [x] AI assistant page and career profile in Settings; job description on applications (**Ready**, M5)
+- [x] AI assistant page and career profile in Settings; job description on applications (**Ready**, #11)
 - [x] Responsive layouts (checked at 390 px and 1440 px), loading, empty and error states
 - [x] Accessibility: labelled forms, keyboard support (board, tabs, dialogs), skip link, chart text alternatives
 - [ ] Public deployment as a Render static site (**Planned**, M6)

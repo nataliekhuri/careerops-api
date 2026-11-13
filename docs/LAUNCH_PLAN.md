@@ -10,7 +10,7 @@ deploys, migrates or changes a live service needs explicit approval first.
 |---|---|---|---|
 | 1 | **Database lifetime.** The free Render PostgreSQL database expires **30 days after creation** (ours was created around 12 Nov 2026, so roughly 12 Dec 2026; check the Render dashboard), and is deleted 14 days later. | a) Stay free: treat the app as a demo and recreate the database when it expires (all data lost). b) Upgrade the database to a paid plan (costs money). | For a portfolio launch, a), with a clear "demo, data may be reset" notice. Choose b) only if real users should keep data. |
 | 2 | **Public sign-up.** | Open registration, or a demo video only. | Open registration, plus login rate limiting (step 3.1). Do not publish a shared demo password: anyone could change or delete it. |
-| 3 | **Production migrations** `e1ea5f0b4a8d` (#8) and `66ff5fb506ac` (M5). Both are additive and run automatically at container start. | Approve each with a backup. | Approve both, each with backup option A or B from the PR #8 plan. |
+| 3 | **Production migrations** `e1ea5f0b4a8d` (#8) and `66ff5fb506ac` (#11). Both are additive and run automatically at container start. | Approve each with a backup. | Approve both, each with backup option A or B from the PR #8 plan. |
 | 4 | **Frontend URL.** | `careerops-web.onrender.com` (free), or a custom domain (domain costs money). | The free `onrender.com` URL. |
 
 ## 2. Merge and migration order
@@ -21,7 +21,7 @@ run when the container starts.
 1. **#6**: README links. No deploy impact.
 2. **#8**: companies, interviews, dashboard. Back up the database first (see the PR #8 comment). Migration `e1ea5f0b4a8d`. Smoke test: `/health/ready`, register, `GET /dashboard/stats`.
 3. **#9, #10**: frontend code only. The Docker image excludes `frontend/`, so the API does not change.
-4. **M5 PR**: AI assistant. Back up again, then migration `66ff5fb506ac` (exact SQL in the PR). Smoke test: `GET /ai/provider`, `PUT /users/me/career-profile`, `POST /ai/match`.
+4. **#11**: AI assistant. Back up again, then migration `66ff5fb506ac` (exact SQL in the PR). Smoke test: `GET /ai/provider`, `PUT /users/me/career-profile`, `POST /ai/match`.
 5. **M6 PR** (this plan): static site, CORS and launch hardening.
 
 Rollback: revert the merge commit on `main`, which redeploys the previous image. Each
@@ -95,7 +95,7 @@ allowance that is ample for a portfolio project.
 - [ ] Decisions 1–4 made
 - [ ] Backups taken and verified, then #8 merged; production migration `e1ea5f0b4a8d` succeeded
 - [ ] #9, #10 merged
-- [ ] Backup taken, then the M5 PR merged; production migration `66ff5fb506ac` succeeded
+- [ ] Backup taken, then #11 merged; production migration `66ff5fb506ac` succeeded
 - [ ] M6 PR merged; static site live; `CORS_ORIGINS` set
 - [ ] Smoke test on production passed (section 3.4)
 - [ ] Response headers checked (CSP, nosniff, caching)
