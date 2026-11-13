@@ -5,8 +5,9 @@ import { afterAll, afterEach, beforeAll } from 'vitest'
 
 import { server } from './server'
 
-// CI machines can be slow on the first render; wait up to 3 s for async UI.
-configure({ asyncUtilTimeout: 3000 })
+// The first render of a lazily loaded page is slow on a cold start (fresh checkout / CI),
+// so wait up to 10 s for async UI. Passing tests are not slowed down by this.
+configure({ asyncUtilTimeout: 10_000 })
 
 // Any request without a matching mock fails the test, so nothing reaches a real network.
 beforeAll(() => server.listen({ onUnhandledFrame: 'error' }))

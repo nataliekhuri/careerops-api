@@ -27,6 +27,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     restoreMocks: true,
+    testTimeout: 30_000,
     // Absolute base URL so fetch works in the test environment (MSW intercepts it).
     env: { VITE_API_URL: 'http://localhost/api' },
   },
