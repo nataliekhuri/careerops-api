@@ -150,6 +150,13 @@ export function RegisterPage() {
         <Button type="submit" className="w-full" loading={isSubmitting}>
           Create account
         </Button>
+        <p className="text-center text-xs text-slate-500">
+          By creating an account you agree to how CareerOps handles your data — see the{' '}
+          <Link to="/privacy" className="underline underline-offset-2 hover:text-slate-700">
+            privacy notice
+          </Link>
+          .
+        </p>
       </form>
     </AuthShell>
   )

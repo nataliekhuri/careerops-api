@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 
 from app.api.deps import CurrentUser, DbSession
+from app.api.rate_limit import rate_limit_login, rate_limit_register
 from app.core.security import create_access_token, verify_password
 from app.crud import user as crud
 from app.schemas.user import AccountDeletion, PasswordChange, Token, UserCreate, UserRead, UserUpdate
@@ -12,17 +13,28 @@ auth_router = APIRouter(prefix="/auth", tags=["auth"])
 users_router = APIRouter(prefix="/users", tags=["users"])
 
 
-@auth_router.post("/register", response_model=UserRead, status_code=status.HTTP_201_CREATED)
+@auth_router.post(
+    "/register",
+    response_model=UserRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=[Depends(rate_limit_register)],
+)
 def register(data: UserCreate, db: DbSession):
-    """Create an account. Emails are case-insensitive and must be unique."""
+    """Create an account. Emails are case-insensitive and must be unique.
+
+    Limited to 5 registrations per IP per hour.
+    """
     if crud.get_user_by_email(db, data.email) is not None:
         raise HTTPException(status_code=409, detail="An account with this email already exists")
     return crud.create_user(db, data)
 
 
-@auth_router.post("/login", response_model=Token)
+@auth_router.post("/login", response_model=Token, dependencies=[Depends(rate_limit_login)])
 def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], db: DbSession):
-    """Exchange email (sent as `username`) and password for a bearer token."""
+    """Exchange email (sent as `username`) and password for a bearer token.
+
+    Limited to 5 attempts per email and 20 attempts per IP, both per 15 minutes.
+    """
     user = crud.authenticate(db, form.username, form.password)
     if user is None:
         raise HTTPException(

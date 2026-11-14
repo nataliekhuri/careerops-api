@@ -29,56 +29,75 @@ More screens (board, interview calendar, mobile) are in [`docs/screenshots/`](do
 
 ```
 app/
-├── main.py                  # creates the FastAPI app, CORS, error handlers and routes
+├── main.py                  # creates the FastAPI app, security headers, CORS, error handlers and routes
 ├── core/
-│   ├── config.py            # settings from .env / environment (DB_* or DATABASE_URL, JWT, CORS)
-│   └── security.py          # Argon2 password hashing, JWT access tokens
+│   ├── config.py             # settings from .env / environment (DB_* or DATABASE_URL, JWT, CORS, AI_PROVIDER)
+│   ├── security.py           # Argon2 password hashing, JWT access tokens
+│   ├── security_headers.py   # X-Frame-Options, nosniff, Referrer-Policy, Permissions-Policy, HSTS
+│   └── rate_limit.py          # in-memory sliding-window rate limiter
 ├── db/
-│   ├── base.py              # SQLAlchemy base class
-│   └── session.py           # database engine and per-request session
-├── models/                  # users, applications, companies, interviews
+│   ├── base.py               # SQLAlchemy base class
+│   └── session.py            # database engine and per-request session
+├── models/                  # users, applications, companies, interviews, career profiles
 ├── schemas/                 # request/response models and validation rules
 ├── crud/                    # database read/write functions (always scoped to the owner)
+├── ai/                       # the free built-in career analyzer (skills.py, analyzer.py,
+│                              interview_prep.py, providers.py — the AI provider interface)
 └── api/
-    ├── deps.py              # shared dependencies (DB session, current user, owned application)
-    ├── errors.py            # safe 500/503 error responses + logging
+    ├── deps.py               # shared dependencies (DB session, current user, owned records)
+    ├── rate_limit.py          # login/registration rate-limiting dependencies
+    ├── errors.py              # safe 500/503 error responses + logging
     └── routes/
-        ├── health.py        # /, /health (liveness), /health/ready (readiness)
-        ├── auth.py          # /auth/register, /auth/login, /users/me
-        ├── companies.py     # /companies
-        ├── interviews.py    # /interviews
-        ├── dashboard.py     # /dashboard/stats
-        └── applications.py  # /applications CRUD endpoints
+        ├── health.py          # /, /health (liveness), /health/ready (readiness)
+        ├── auth.py            # /auth/register, /auth/login, /users/me (rate limited)
+        ├── companies.py       # /companies
+        ├── interviews.py      # /interviews
+        ├── dashboard.py       # /dashboard/stats
+        ├── ai.py               # /ai/* (job analysis, match, CV review, interview prep), /users/me/career-profile
+        └── applications.py    # /applications CRUD endpoints
 alembic/
 ├── env.py                   # migration environment (app settings + migration lock)
 └── versions/                # migration scripts
-tests/
-├── conftest.py              # fixtures: isolated test schema, rollback per test
-├── test_auth.py             # registration, login, tokens, profile, account deletion
-├── test_isolation.py        # users can never see or change each other's data
-├── test_companies.py        # companies, application links, isolation
-├── test_interviews.py       # interviews, calendar filters, cascade, DB-level ownership
-├── test_dashboard.py        # exact statistics, weekly buckets, isolation
-├── test_applications.py     # CRUD, validation and error-handling tests
-├── test_application_workflow.py  # statuses, timestamps, PATCH, filters, pagination
+tests/                       # 350+ tests; a sample of what each file covers
+├── conftest.py               # fixtures: isolated test schema, rollback per test, rate-limit reset
+├── test_auth.py               # registration, login, tokens, profile, account deletion
+├── test_rate_limit.py          # login/registration rate limiting
+├── test_security_headers.py    # response security headers, conditional HSTS
+├── test_isolation.py           # users can never see or change each other's data
+├── test_companies.py           # companies, application links, isolation
+├── test_interviews.py          # interviews, calendar filters, cascade, DB-level ownership
+├── test_dashboard.py           # exact statistics, weekly buckets, isolation
+├── test_applications.py        # CRUD, validation and error-handling tests
+├── test_application_workflow.py # statuses, timestamps, PATCH, filters, pagination
+├── test_ai_analyzer.py          # the built-in analyzer: skills, matching, CV review, interview prep
+├── test_ai_api.py               # AI endpoints: auth, validation, isolation, real-data use
 ├── test_health.py
-├── test_reliability.py      # readiness, database outages, unexpected errors
-├── test_migrations.py       # migrations match the models, handle data, are reversible
-├── test_config.py           # DB_* and DATABASE_URL settings
-└── test_deploy_config.py    # render.yaml sanity checks
+├── test_reliability.py          # readiness, database outages, unexpected errors
+├── test_migrations.py           # migrations match the models, handle data, are reversible
+├── test_config.py               # DB_* and DATABASE_URL settings
+└── test_deploy_config.py        # render.yaml sanity checks (both services)
 scripts/
-├── start.sh                 # container start: optional migrations, then the API
-└── export_openapi.py        # writes frontend/openapi.json for type generation
+├── start.sh                   # container start: optional migrations, then the API
+├── export_openapi.py          # writes frontend/openapi.json for type generation
+└── smoke_test.py               # end-to-end production smoke test (see docs/LAUNCH_PLAN.md)
 frontend/                    # React + TypeScript web app (see "Frontend" below)
-├── src/api/                 # typed API client, generated schema types, data hooks
-├── src/auth/                # token storage, auth context, protected routes
-├── src/components/          # design system (buttons, fields, dialogs, badges …)
-├── src/layouts/             # app shell with responsive navigation
-└── src/pages/               # landing, auth, applications, companies
+├── src/api/                   # typed API client, generated schema types, data hooks
+├── src/auth/                  # token storage, auth context, protected routes
+├── src/components/            # design system (buttons, fields, dialogs, badges …)
+├── src/layouts/                # app shell with responsive navigation
+└── src/pages/                  # landing, privacy, auth, applications, companies, dashboard,
+                                  board, interviews, settings, assistant/ (AI assistant)
+docs/
+├── screenshots/               # real screenshots from a seeded demo account
+├── FEATURES.md                 # full feature checklist: Live / Tested locally / Planned
+├── SECURITY_REVIEW.md          # auth, headers, error handling, production config
+├── MIGRATION_AND_BACKUP_PLAN.md # exact SQL and backup steps for pending production migrations
+├── LAUNCH_PLAN.md               # public frontend launch plan and go-live checklist
+└── LINKEDIN_LAUNCH.md           # launch post copy and demo video script
 Dockerfile                   # production image (non-root, honours $PORT)
 docker-compose.yml           # db + migrate + api for local use
 .github/workflows/ci.yml     # backend lint/tests, frontend checks, Docker build + smoke test
-render.yaml                  # Render Blueprint (free web service + free PostgreSQL)
+render.yaml                  # Render Blueprint: free API + free static frontend + free PostgreSQL
 ```
 
 ## Features
@@ -294,6 +313,7 @@ A React single-page app in [`frontend/`](frontend/) that uses the real API.
 | Interviews | Month calendar of real interviews (only the visible weeks are requested), day list with join links, schedule / edit / record outcome / delete; times are entered locally and sent with a time zone |
 | Settings | Edit profile, career profile (skills, experience, CV), change password (current password checked by the API), delete account with password + confirmation |
 | AI assistant | Pick a saved application or paste a job: match score with breakdown, job analysis, CV suggestions and interview prep in keyboard-accessible tabs; skill demand across your applications |
+| Privacy | A public `/privacy` page explaining what is stored, that the AI assistant runs locally (nothing sent to a third party), and how to delete your account; linked from the landing page and registration |
 | Layout | Responsive sidebar / mobile drawer, user menu, skip link, accessible dialogs |
 
 **Stack:** React 19, TypeScript, Vite, Tailwind CSS v4, React Router, TanStack Query,
@@ -401,6 +421,7 @@ cp .env.example .env
 | `JWT_SECRET_KEY` | —             | **Required.** Signs login tokens; at least 32 random characters |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `60` | Login token lifetime |
 | `CORS_ORIGINS` | —               | Comma-separated browser origins allowed to call the API (e.g. the frontend) |
+| `AI_PROVIDER`  | `builtin`       | AI assistant provider; only `builtin` (free, local, no API key) is accepted |
 
 `.env` is listed in `.gitignore` and must never be committed.
 
@@ -479,7 +500,15 @@ The repository includes a [Render Blueprint](https://render.com/docs/blueprint-s
 (`render.yaml`) that creates:
 
 - **careerops-api**: a free Docker web service in Frankfurt, built from the `Dockerfile`.
+- **careerops-web**: a free static site in Frankfurt, built from `frontend/` (`npm run build`), serving the React app with a strict Content-Security-Policy and other security headers.
 - **careerops-db**: a free PostgreSQL 18 database, reachable only from inside Render.
+
+**Rate limiting and security headers.** `/auth/login` and `/auth/register` are rate
+limited (5 attempts per email + 20 per IP per 15 minutes on login; 5 registrations per
+IP per hour), and every API response carries `X-Content-Type-Options`,
+`X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Strict-Transport-Security`
+once served over HTTPS. See [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md) for the
+full review.
 
 ### How it works
 
@@ -490,13 +519,21 @@ The repository includes a [Render Blueprint](https://render.com/docs/blueprint-s
 | Health checks | Render only routes traffic to a new deploy once `/health/ready` returns 200, meaning the app is up **and** can reach the database. |
 | Deploy trigger | Automatic deploys from `main`, only after the GitHub Actions checks pass. |
 | Database access | `ipAllowList: []` blocks connections from the internet. |
+| CORS | The API only accepts browser requests from the deployed frontend's exact origin (`CORS_ORIGINS`, set in `render.yaml`); unset, it accepts none. |
 
 ### Deploy it
 
 1. Create a free account at [render.com](https://render.com) and connect your GitHub account.
 2. In the Render Dashboard choose **New → Blueprint**, select this repository and the `main` branch.
-3. Review the two resources (both on the **Free** plan) and click **Apply**.
-4. Wait for the first deploy, then open `https://<your-service>.onrender.com/docs`.
+3. Review the three resources (all on the **Free** plan) and click **Apply**.
+4. Wait for the first deploy, then open `https://<your-api-service>.onrender.com/docs`
+   and `https://<your-web-service>.onrender.com`.
+5. Run `python scripts/smoke_test.py --api-url <your API URL> --web-url <your web URL>`
+   to verify the whole flow end to end (it creates and deletes one throwaway account).
+
+See [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md) for the full go-live checklist and
+[docs/MIGRATION_AND_BACKUP_PLAN.md](docs/MIGRATION_AND_BACKUP_PLAN.md) for the exact SQL
+and backup steps for each pending production migration.
 
 ### Free plan limitations
 
@@ -515,40 +552,27 @@ data is lost).
 
 ## Project Status
 
-This project is in early development.
+**Live in production (API 2.0.0):** user accounts and auth, job application CRUD with
+status workflow, filtering/sorting/pagination, per-user data isolation, health checks,
+PostgreSQL storage, Docker/CI/Render deployment.
 
-**Completed**
+**Built and tested locally, waiting for approval to deploy:** companies, interviews and
+the dashboard (PR #8); the full React frontend — landing, auth, applications,
+companies, dashboard, Kanban board, interview calendar, settings (PR #9, #10); the AI
+career assistant and career profile (PR #11); and production hardening — login rate
+limiting, security headers, a privacy notice page, the static-site deployment config,
+and a production smoke-test script (PR #12).
 
-- [x] User accounts: registration, login (JWT), profile, password change, account deletion
-- [x] Per-user data ownership with tested cross-user isolation
-- [x] CRUD endpoints for job applications, including `PATCH` partial updates
-- [x] Request validation with Pydantic (length limits, blank and unknown fields rejected)
-- [x] Application status workflow, enforced in the API and the database
-- [x] `created_at` / `updated_at` timestamps
-- [x] Companies (per user) linked to applications
-- [x] Interviews with calendar-range filtering and outcomes
-- [x] Dashboard statistics endpoint
-- [x] Filtering, sorting and pagination
-- [x] Liveness and readiness health checks
-- [x] Safe error responses (no internal details leaked) and database connection timeout
-- [x] PostgreSQL database for persistent storage
-- [x] Configuration via environment variables (`.env`)
-- [x] Database migrations with Alembic (tested for data handling and rollback)
-- [x] Automated tests with pytest
-- [x] Continuous integration with GitHub Actions (lint, tests, Docker smoke test)
-- [x] Linting and formatting with Ruff
-- [x] Docker image and Docker Compose setup
-- [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
-- [x] React + TypeScript frontend: landing, auth, applications, companies (typed API client)
-- [x] Frontend: dashboard charts, Kanban board, interview calendar, profile and settings
-- [x] AI career assistant (free built-in analyzer, provider interface)
+**Not yet implemented:** a hosted (non-free) AI provider, email verification, a CAPTCHA
+on registration.
 
-**Planned (not yet implemented)**
-
-- [ ] Frontend deployment (Render static site): see [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md)
-
-The full feature checklist, with what is merged and what is waiting for review, is in
-[docs/FEATURES.md](docs/FEATURES.md).
+This distinction matters: **"built" is not "live."** The full checklist — with each
+feature marked Live, Tested locally, Configured-but-not-applied, or Planned, and which
+pull request and tests back it up — is in [docs/FEATURES.md](docs/FEATURES.md). The
+exact production migration SQL and backup steps are in
+[docs/MIGRATION_AND_BACKUP_PLAN.md](docs/MIGRATION_AND_BACKUP_PLAN.md), the security
+review is in [docs/SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md), and the full launch
+plan is in [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md).
 
 ## License
 

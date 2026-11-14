@@ -1,110 +1,113 @@
 # Public frontend launch plan (M6)
 
 Goal: a public CareerOps web app on Render's free plan, talking to the existing API,
-with no new costs. **Nothing in this plan has been done yet.** Every step that merges,
-deploys, migrates or changes a live service needs explicit approval first.
+with no new costs. **Nothing in this plan has been deployed.** The configuration and
+hardening below are built and tested locally, in the M6 pull request. Every step that
+merges, deploys, migrates or changes a live service still needs your explicit approval.
+
+See [FEATURES.md](FEATURES.md) for the full checklist (implemented / tested locally /
+live) and [MIGRATION_AND_BACKUP_PLAN.md](MIGRATION_AND_BACKUP_PLAN.md) for the exact
+migration SQL and backup steps referenced below.
 
 ## 1. Decisions needed before launch
 
 | # | Decision | Options | Recommendation |
 |---|---|---|---|
-| 1 | **Database lifetime.** The free Render PostgreSQL database expires **30 days after creation** (ours was created around 12 Nov 2026, so roughly 12 Dec 2026; check the Render dashboard), and is deleted 14 days later. | a) Stay free: treat the app as a demo and recreate the database when it expires (all data lost). b) Upgrade the database to a paid plan (costs money). | For a portfolio launch, a), with a clear "demo, data may be reset" notice. Choose b) only if real users should keep data. |
-| 2 | **Public sign-up.** | Open registration, or a demo video only. | Open registration, plus login rate limiting (step 3.1). Do not publish a shared demo password: anyone could change or delete it. |
-| 3 | **Production migrations** `e1ea5f0b4a8d` (#8) and `66ff5fb506ac` (#11). Both are additive and run automatically at container start. | Approve each with a backup. | Approve both, each with backup option A or B from the PR #8 plan. |
-| 4 | **Frontend URL.** | `careerops-web.onrender.com` (free), or a custom domain (domain costs money). | The free `onrender.com` URL. |
+| 1 | **Database lifetime.** The free Render PostgreSQL database expires **30 days after creation** (created around 12 Nov 2026, so roughly 12 Dec 2026 — check the exact date in the Render dashboard), and is deleted 14 days after that. | a) Stay free: treat the app as a demo and recreate the database when it expires (all data lost). b) Upgrade the database to a paid plan (costs money). | For a portfolio launch, a), with the "demo, data may be reset" notice already on the [privacy page](../frontend/src/pages/Privacy.tsx). Choose b) only if real users should keep data. |
+| 2 | **Public sign-up.** | Open registration, or a demo video only. | Open registration — login/registration rate limiting is built (see below). Do not publish a shared demo password: anyone could change or delete it. |
+| 3 | **Production migrations** `e1ea5f0b4a8d` (#8) and `66ff5fb506ac` (#11). Both are additive and run automatically at container start. | Approve each with a backup. | Approve both, each with a backup (option A or B — see MIGRATION_AND_BACKUP_PLAN.md). |
+| 4 | **Frontend URL.** | `careerops-web.onrender.com` (free), or a custom domain (costs money). | The free `onrender.com` URL — already what `render.yaml` and `CORS_ORIGINS` are configured for. |
 
 ## 2. Merge and migration order
 
 Each merge to `main` deploys the API automatically once CI passes. Pending migrations
-run when the container starts.
+run when the container starts (see "How it deploys" in MIGRATION_AND_BACKUP_PLAN.md).
 
 1. **#6**: README links. No deploy impact.
-2. **#8**: companies, interviews, dashboard. Back up the database first (see the PR #8 comment). Migration `e1ea5f0b4a8d`. Smoke test: `/health/ready`, register, `GET /dashboard/stats`.
+2. **#8**: companies, interviews, dashboard. **Back up first.** Migration `e1ea5f0b4a8d`.
 3. **#9, #10**: frontend code only. The Docker image excludes `frontend/`, so the API does not change.
-4. **#11**: AI assistant. Back up again, then migration `66ff5fb506ac` (exact SQL in the PR). Smoke test: `GET /ai/provider`, `PUT /users/me/career-profile`, `POST /ai/match`.
-5. **M6 PR** (this plan): static site, CORS and launch hardening.
+4. **#11**: AI assistant. **Back up again.** Migration `66ff5fb506ac`.
+5. **M6 PR** (this one): rate limiting, security headers, privacy page, the static-site Blueprint entry, `CORS_ORIGINS`, and this documentation. No migration.
+6. **Sync the Blueprint in the Render Dashboard** (a separate, manual step — Render does not create the static site just because `render.yaml` changed in Git): this is what actually creates `careerops-web` and makes the frontend live.
 
-Rollback: revert the merge commit on `main`, which redeploys the previous image. Each
-migration has a tested downgrade, but the safest database rollback is restoring the
-backup taken just before.
+Rollback: revert the merge commit on `main`, which redeploys the previous image/site.
+Each migration has a tested downgrade, but the safest database rollback is restoring
+the backup taken just before.
 
-## 3. Work to do in the M6 pull request
+## 3. What is in the M6 pull request
 
-### 3.1 Hardening (backend)
+### 3.1 Backend hardening — done, tested
 
-- **Login rate limiting:** for example 5 failed attempts per email per 15 minutes, plus a per-IP limit on `/auth/register` and `/auth/login`. An in-memory limiter is enough on a single free instance. Answer 429 with `Retry-After`.
-- Upper bounds for request bodies are already set (job descriptions 20,000 characters, CV 30,000).
-- Keep `CORS_ORIGINS` to the exact frontend origin, no wildcards.
+- **Login rate limiting**: 5 attempts per email + 20 per IP, both per 15 minutes, on `/auth/login`; 5 registrations per IP per hour on `/auth/register`. 429 with `Retry-After`. `app/core/rate_limit.py`, `app/api/rate_limit.py`, `tests/test_rate_limit.py` (12 tests).
+- **Security response headers** on every API response: `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`, and `Strict-Transport-Security` once a request has reached the API over HTTPS. `app/core/security_headers.py`, `tests/test_security_headers.py` (4 tests).
+- Request size limits were already in place (job descriptions 20,000 characters, CVs 30,000).
+- Full write-up: [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
-### 3.2 Static site (Render Blueprint)
+### 3.2 Static site and CORS — configured, not yet synced to Render
 
-Add to `render.yaml`. This is not applied yet: syncing the Blueprint creates the service.
+`render.yaml` now has a second service, `careerops-web` (free static site, builds
+`frontend/`), with a CSP, caching and security headers, and the API service now sets
+`CORS_ORIGINS=https://careerops-web.onrender.com`. Sanity-checked by 7 tests in
+`tests/test_deploy_config.py` (plan is free, builds from `frontend/`, is a single-page
+app rewrite, points at the live API, has every security header, long cache only on
+hashed assets, same region as the API).
 
-```yaml
-  - type: web
-    name: careerops-web
-    runtime: static
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
-    branch: main
-    autoDeployTrigger: checksPass
-    pullRequestPreviewsEnabled: false
-    envVars:
-      - key: VITE_API_URL
-        value: https://careerops-api.onrender.com
-    routes:
-      - type: rewrite        # single-page app: every route serves index.html
-        source: /*
-        destination: /index.html
-    headers:
-      - path: /assets/*
-        name: Cache-Control
-        value: public, max-age=31536000, immutable
-      - path: /*
-        name: Content-Security-Policy
-        value: "default-src 'self'; connect-src 'self' https://careerops-api.onrender.com; img-src 'self' data:; style-src 'self' 'unsafe-inline'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
-      - path: /*
-        name: X-Content-Type-Options
-        value: nosniff
-      - path: /*
-        name: Referrer-Policy
-        value: strict-origin-when-cross-origin
+**This file being in Git does not create the service.** Applying it is a separate step:
+in the Render Dashboard, open the Blueprint and sync, which then creates
+`careerops-web` for the first time.
+
+### 3.3 Privacy notice page — done, tested
+
+`/privacy`, public, linked from the landing page footer and from the registration form.
+Explains what is stored, that the AI assistant is the free built-in analyzer (nothing
+sent to a third party), who can see the data, where it is hosted, the free-database
+expiry caveat, how to delete an account, and the security measures in place. 3 tests in
+`frontend/src/pages/public-pages.test.tsx`.
+
+### 3.4 Production smoke test — done, dry-run verified locally
+
+`scripts/smoke_test.py` (stdlib only, no extra install): registers a throwaway account,
+exercises every main flow (companies, applications, board move, interviews, dashboard,
+all 4 AI assistant endpoints, skill insights), checks security headers, confirms
+isolation (a non-existent id answers 404, not a crash), deletes the account, and
+confirms it is really gone. Exits non-zero on any failure.
+
+```bash
+python scripts/smoke_test.py --api-url https://careerops-api.onrender.com
+python scripts/smoke_test.py --api-url https://careerops-api.onrender.com \
+    --web-url https://careerops-web.onrender.com
 ```
 
-On the API service, add `CORS_ORIGINS=https://careerops-web.onrender.com`.
+Dry-run verified against a local instance on a throwaway database schema (24 checks,
+all passing); **not yet run against the live Render API** — that is itself a write
+action against production and needs the same go-ahead as any other production step.
 
-Render static sites are free, include a CDN and TLS, and have a monthly bandwidth
-allowance that is ample for a portfolio project.
+### 3.5 Not done in M6 (left for later, listed here so it isn't lost)
 
-### 3.3 Frontend polish
-
-- When the API takes more than about 3 seconds to answer (free instance waking up), show "Starting the server, this can take up to a minute…" instead of a bare spinner.
-- Add a privacy notice page: what is stored (account, applications, CV text), that the AI analysis runs on the server with no third parties, how to delete the account (Settings → Delete account), and the "demo, data may be reset" notice if decision 1a is chosen.
-- Add a page title and description per route, Open Graph tags and a social preview image (the dashboard screenshot) for LinkedIn link previews.
-
-### 3.4 Checks in CI and before go-live
-
-- Production build runs against `VITE_API_URL` set to the real API.
-- A real-browser smoke test against the deployed site: register → add an application with a job description → board move → schedule an interview → AI match → delete the account.
-- Lighthouse: accessibility and best practices at 90 or higher on the landing and dashboard pages.
-- No console errors; CSP has no violations.
+- A "starting the server, this can take up to a minute" message while the free API
+  wakes from sleep, instead of a bare spinner.
+- Open Graph tags / a social preview image for link previews (LinkedIn, etc.).
+- A hosted AI provider (needs approval — costs money, sends data to a third party).
+- Email verification and password reset by email (needs an email provider).
+- A CAPTCHA on registration (needs a third-party key and would need approval); the
+  current per-IP rate limit slows but does not stop a distributed script.
 
 ## 4. Go-live checklist
 
 - [ ] Decisions 1–4 made
-- [ ] Backups taken and verified, then #8 merged; production migration `e1ea5f0b4a8d` succeeded
+- [ ] Backup taken, then #8 merged; production migration `e1ea5f0b4a8d` approved and succeeded
 - [ ] #9, #10 merged
-- [ ] Backup taken, then #11 merged; production migration `66ff5fb506ac` succeeded
-- [ ] M6 PR merged; static site live; `CORS_ORIGINS` set
-- [ ] Smoke test on production passed (section 3.4)
-- [ ] Response headers checked (CSP, nosniff, caching)
+- [ ] Backup taken, then #11 merged; production migration `66ff5fb506ac` approved and succeeded
+- [ ] M6 PR merged
+- [ ] Blueprint synced in the Render Dashboard so `careerops-web` is created
+- [ ] `scripts/smoke_test.py` run against the live API (and `--web-url` once the static site is live) and passed
+- [ ] Response headers spot-checked in a real browser (CSP, nosniff, HSTS)
 - [ ] Database expiry date noted in the calendar (if staying on the free plan)
 - [ ] README updated with the live frontend URL
-- [ ] LinkedIn post: screenshots from `docs/screenshots/`, a short screen recording, and links to the live app and the repository
+- [ ] LinkedIn post published — see [LINKEDIN_LAUNCH.md](LINKEDIN_LAUNCH.md)
 
 ## 5. After launch
 
 - Watch the Render logs for 5xx errors and slow requests during the first days.
-- Check the free instance hours (750 per month) and bandwidth in the Render dashboard.
+- Check the free instance hours (750/month) and static-site bandwidth in the Render dashboard.
 - Optional free uptime check on `/health` (keep the interval reasonable; it also keeps the instance awake and uses hours).
