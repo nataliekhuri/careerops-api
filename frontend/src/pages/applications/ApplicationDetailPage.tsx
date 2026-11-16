@@ -1,4 +1,4 @@
-import { ArrowLeft, Building2, CalendarPlus, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarPlus, Pencil, Sparkles, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
@@ -17,6 +17,7 @@ import { ErrorMessage } from '@/components/ErrorMessage'
 import { errorText } from '@/lib/errors'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/Button'
+import { buttonClasses } from '@/components/ui/buttonStyles'
 import { Card, PageHeader } from '@/components/ui/Card'
 import { ConfirmDialog, Modal } from '@/components/ui/Dialogs'
 import { Select } from '@/components/ui/Field'
@@ -107,6 +108,9 @@ export function ApplicationDetailPage() {
         actions={
           !editing && (
             <>
+              <Link to={`/assistant?application=${application.id}`} className={buttonClasses('secondary')}>
+                <Sparkles className="size-4" aria-hidden /> Analyse with AI
+              </Link>
               <Button variant="secondary" onClick={() => setEditing(true)}>
                 <Pencil className="size-4" aria-hidden /> Edit
               </Button>
@@ -139,6 +143,21 @@ export function ApplicationDetailPage() {
               <p className="mt-3 text-sm whitespace-pre-wrap text-slate-700">{application.notes}</p>
             ) : (
               <p className="mt-3 text-sm text-slate-500">No notes yet. Use Edit to add some.</p>
+            )}
+            <h2 className="mt-6 text-sm font-semibold text-slate-900">Job description</h2>
+            {application.job_description ? (
+              <details className="mt-3">
+                <summary className="cursor-pointer text-sm font-medium text-brand-700">
+                  Show the job description ({application.job_description.split(/\s+/).length} words)
+                </summary>
+                <p className="mt-3 max-h-96 overflow-y-auto text-sm whitespace-pre-wrap text-slate-700">
+                  {application.job_description}
+                </p>
+              </details>
+            ) : (
+              <p className="mt-3 text-sm text-slate-500">
+                No job description yet. Use Edit to paste the posting; the AI assistant uses it.
+              </p>
             )}
           </Card>
           <Card className="space-y-5 p-6">

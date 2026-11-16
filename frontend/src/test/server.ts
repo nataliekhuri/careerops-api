@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
-import type { Application, Company, DashboardStats, Interview, User } from '@/api/types'
+import type { Application, CareerProfile, Company, DashboardStats, Interview, SkillInsights, User } from '@/api/types'
 
 export const API = 'http://localhost/api'
 
@@ -29,6 +29,7 @@ export function makeApplication(overrides: Partial<Application> = {}): Applicati
     location: 'Remote',
     status: 'Applied',
     notes: '',
+    job_description: '',
     company_id: null,
     created_at: '2026-11-01T10:00:00Z',
     updated_at: '2026-11-02T10:00:00Z',
@@ -88,13 +89,47 @@ export function makeInterview(overrides: Partial<Interview> = {}): Interview {
   }
 }
 
+export function makeCareerProfile(overrides: Partial<CareerProfile> = {}): CareerProfile {
+  return {
+    headline: '',
+    target_role: '',
+    years_experience: null,
+    skills: [],
+    cv_text: '',
+    recognized_skills: [],
+    unrecognized_skills: [],
+    updated_at: null,
+    ...overrides,
+  }
+}
+
+export function emptyInsights(overrides: Partial<SkillInsights> = {}): SkillInsights {
+  return {
+    analyzed_applications: 0,
+    total_applications: 0,
+    coverage_percent: null,
+    skills: [],
+    top_missing: [],
+    ...overrides,
+  }
+}
+
 /** Handlers for a signed-in user with the given data. */
 export function signedIn({
   applications = [] as Application[],
   companies = [] as Company[],
   interviews = [] as Interview[],
   stats = emptyStats(),
-}: { applications?: Application[]; companies?: Company[]; interviews?: Interview[]; stats?: DashboardStats } = {}) {
+  careerProfile = makeCareerProfile(),
+  insights = emptyInsights(),
+}: {
+  applications?: Application[]
+  companies?: Company[]
+  interviews?: Interview[]
+  stats?: DashboardStats
+  careerProfile?: CareerProfile
+  insights?: SkillInsights
+} = {}) {
   localStorage.setItem('careerops.token', fakeToken())
   server.use(
     http.get(`${API}/users/me`, () => HttpResponse.json(user)),
@@ -108,5 +143,15 @@ export function signedIn({
       HttpResponse.json(interviews, { headers: { 'X-Total-Count': String(interviews.length) } }),
     ),
     http.get(`${API}/dashboard/stats`, () => HttpResponse.json(stats)),
+    http.get(`${API}/users/me/career-profile`, () => HttpResponse.json(careerProfile)),
+    http.get(`${API}/ai/skill-insights`, () => HttpResponse.json(insights)),
+    http.get(`${API}/ai/provider`, () =>
+      HttpResponse.json({
+        name: 'builtin',
+        external: false,
+        cost: 'free',
+        description: 'Built-in rule-based analyzer. Runs on this server; your data is not sent anywhere.',
+      }),
+    ),
   )
 }

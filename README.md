@@ -206,6 +206,37 @@ applications), applications per week for the last 12 weeks (Monday-based, UTC,
 zero-filled), top 5 companies, company and interview totals, and the next 5 pending
 interviews.
 
+### AI career assistant
+
+A free, built-in analyzer (no API key, no external calls; your data stays on the server):
+
+| Endpoint | What it does |
+|---|---|
+| `GET` / `PUT /users/me/career-profile` | Your skills, years of experience, target role and CV text |
+| `POST /ai/job-analysis` | Skills in a job description (**required** vs. **nice-to-have**, with the line each was found on), seniority, years of experience, work mode, role family |
+| `POST /ai/match` | Explainable 0-100 match score: skills (85%) + experience (15%), with matched, related and missing skills, reasons and next steps |
+| `POST /ai/cv-review` | CV checks (length, sections, measurable results, action verbs, weak phrases, links, job keywords) and prioritised suggestions |
+| `POST /ai/interview-prep` | Role- and skill-specific technical questions with tips, questions about your gaps, behavioural (STAR) questions, questions to ask, company research and your upcoming interviews |
+| `GET /ai/skill-insights` | Which skills your saved job descriptions ask for most, and how many you cover |
+| `GET /ai/provider` | Which analyzer answers (`builtin`, free, local) |
+
+The job is either one of **your** applications (`{"application_id": 12}`; it uses the
+application's `job_description`, falling back to its notes with a warning) or pasted text
+(`{"job_description": "...", "position": "..."}`). Another user's application answers
+**422 "Application not found"**, exactly like a missing one.
+
+How the match score works: each skill in the job is worth 2 points if required and 1 if
+nice-to-have (soft skills count half). You earn full credit if the skill is in your
+profile or CV, or is implied by one (FastAPI implies Python; PostgreSQL implies SQL), and
+half credit for related experience (MySQL for PostgreSQL, GitLab CI for GitHub Actions).
+When both the job and your profile state years of experience, they count for 15%.
+
+**AI providers.** The API calls a `CareerAssistant` interface
+([`app/ai/providers.py`](app/ai/providers.py)), so a hosted AI service could be added later
+behind the same endpoints. `AI_PROVIDER` currently accepts only `builtin`: no paid service
+can be switched on by configuration alone, and adding one (with its key in an environment
+variable, the built-in analyzer as fallback) is a deliberate, reviewed change.
+
 ## Data Model
 
 Each job application has the following fields:
@@ -218,6 +249,7 @@ Each job application has the following fields:
 | `location`   | string   | Yes      | —           | 1–255 characters |
 | `status`     | string   | No       | `"Applied"` | One of the statuses below (case-insensitive) |
 | `notes`      | string   | No       | `""`        | up to 5000 characters |
+| `job_description` | string | No  | `""`        | up to 20,000 characters; used by the AI assistant |
 | `company_id` | int/null | No       | `null`      | One of **your** companies; `null` unlinks |
 | `created_at` | datetime | —        | Set by the server | Read-only, ISO 8601 with time zone |
 | `updated_at` | datetime | —        | Set by the server | Read-only; changes whenever a value changes |
@@ -260,7 +292,8 @@ A React single-page app in [`frontend/`](frontend/) that uses the real API.
 | Dashboard | Key figures and rates, applications-per-week chart (with a text alternative), pipeline by status linking to the filtered list, upcoming interviews, top companies — all from `GET /dashboard/stats` |
 | Board | Kanban columns per status; drag a card (mouse, touch or keyboard: Space, ←/→, Space) or use “Move to” — the status is saved through the API, optimistically, and rolled back with a message if the request fails |
 | Interviews | Month calendar of real interviews (only the visible weeks are requested), day list with join links, schedule / edit / record outcome / delete; times are entered locally and sent with a time zone |
-| Settings | Edit profile, change password (current password checked by the API), delete account with password + confirmation |
+| Settings | Edit profile, career profile (skills, experience, CV), change password (current password checked by the API), delete account with password + confirmation |
+| AI assistant | Pick a saved application or paste a job: match score with breakdown, job analysis, CV suggestions and interview prep in keyboard-accessible tabs; skill demand across your applications |
 | Layout | Responsive sidebar / mobile drawer, user menu, skip link, accessible dialogs |
 
 **Stack:** React 19, TypeScript, Vite, Tailwind CSS v4, React Router, TanStack Query,
@@ -507,12 +540,15 @@ This project is in early development.
 - [x] Docker image and Docker Compose setup
 - [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
 - [x] React + TypeScript frontend: landing, auth, applications, companies (typed API client)
+- [x] Frontend: dashboard charts, Kanban board, interview calendar, profile and settings
+- [x] AI career assistant (free built-in analyzer, provider interface)
 
 **Planned (not yet implemented)**
 
-- [ ] Frontend: dashboard charts, Kanban board, interview calendar, profile and settings
-- [ ] AI career assistant
-- [ ] Frontend deployment (Render static site)
+- [ ] Frontend deployment (Render static site): see [docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md)
+
+The full feature checklist, with what is merged and what is waiting for review, is in
+[docs/FEATURES.md](docs/FEATURES.md).
 
 ## License
 

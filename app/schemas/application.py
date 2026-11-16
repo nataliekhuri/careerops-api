@@ -13,6 +13,8 @@ NOTES_MAX_LENGTH = 5000
 
 RequiredText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=NAME_MAX_LENGTH)]
 NotesText = Annotated[str, StringConstraints(strip_whitespace=True, max_length=NOTES_MAX_LENGTH)]
+JOB_DESCRIPTION_MAX_LENGTH = 20_000
+JobDescription = Annotated[str, StringConstraints(strip_whitespace=True, max_length=JOB_DESCRIPTION_MAX_LENGTH)]
 
 
 def _normalise_status(value: Any) -> Any:
@@ -46,6 +48,7 @@ class JobApplication(BaseModel):
     status: Status = Field(default=ApplicationStatus.APPLIED, description="Current stage of the application")
     location: RequiredText = Field(description="City, country or 'Remote'")
     notes: NotesText = Field(default="", description="Free-form notes")
+    job_description: JobDescription = Field(default="", description="The job posting (used by the AI assistant)")
     company_id: int | None = Field(default=None, gt=0, description="Optional link to one of your saved companies")
 
 
@@ -59,6 +62,7 @@ class ApplicationUpdate(BaseModel):
     status: Status | None = None
     location: RequiredText | None = None
     notes: NotesText | None = None
+    job_description: JobDescription | None = None
     company_id: int | None = Field(default=None, gt=0, description="Send null to unlink the company")
 
     @model_validator(mode="after")
@@ -81,6 +85,7 @@ class ApplicationRead(BaseModel):
     status: ApplicationStatus
     location: str
     notes: str
+    job_description: str
     company_id: int | None
     created_at: datetime
     updated_at: datetime

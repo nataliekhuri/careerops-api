@@ -1,4 +1,5 @@
 from functools import lru_cache
+from typing import Literal
 
 from pydantic import AliasChoices, Field, SecretStr, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -41,6 +42,11 @@ class Settings(BaseSettings):
 
     # Browser origins allowed to call the API (comma-separated), e.g. the frontend URL.
     cors_origins: str = ""
+
+    # AI career assistant provider. Only the free built-in analyzer exists: it runs on
+    # this server with no API key. Other values are rejected, so no paid service can be
+    # switched on by accident (see app/ai/providers.py).
+    ai_provider: Literal["builtin"] = "builtin"
 
     @property
     def cors_origin_list(self) -> list[str]:

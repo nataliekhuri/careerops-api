@@ -106,6 +106,7 @@ describe('creating and editing', () => {
     expect(screen.getByLabelText('Company')).toHaveValue('Initech')
     await user.type(screen.getByLabelText('Position'), 'Platform Engineer')
     await user.type(screen.getByLabelText('Location'), 'Remote')
+    await user.type(screen.getByLabelText('Job description (optional)'), 'Python and FastAPI')
     await user.click(screen.getByRole('button', { name: 'Save application' }))
 
     expect(await screen.findByRole('heading', { name: 'Platform Engineer' })).toBeInTheDocument()
@@ -114,6 +115,7 @@ describe('creating and editing', () => {
       position: 'Platform Engineer',
       location: 'Remote',
       status: 'Applied',
+      job_description: 'Python and FastAPI',
       company_id: 7,
     })
   })

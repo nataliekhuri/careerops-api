@@ -14,7 +14,7 @@ npm run build      # production build in dist/
   header, error handling), `hooks.ts` (TanStack Query hooks)
 - `src/auth/` — token storage, `AuthProvider`, route guards
 - `src/components/` — design system
-- `src/pages/` — screens
+- `src/pages/` — screens (`assistant/` is the AI assistant)
 - `src/test/` — MSW server, fixtures and render helpers
 
 Regenerate API types after a backend change:
