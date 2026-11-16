@@ -202,6 +202,8 @@ export interface paths {
         /**
          * Login
          * @description Exchange email (sent as `username`) and password for a bearer token.
+         *
+         *     Limited to 5 attempts per email and 20 attempts per IP, both per 15 minutes.
          */
         post: operations["login_auth_login_post"];
         delete?: never;
@@ -222,6 +224,8 @@ export interface paths {
         /**
          * Register
          * @description Create an account. Emails are case-insensitive and must be unique.
+         *
+         *     Limited to 5 registrations per IP per hour.
          */
         post: operations["register_auth_register_post"];
         delete?: never;

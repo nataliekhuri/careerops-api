@@ -33,13 +33,16 @@ const FEATURES = [
     text: 'Schedule interviews, keep meeting links and notes, and record outcomes.',
   },
   {
+    icon: Sparkles,
+    title: 'AI career assistant',
+    text: 'A free, built-in analyzer scores how you match a job, reviews your CV and preps you for interviews.',
+  },
+  {
     icon: Lock,
     title: 'Private by design',
-    text: 'Your data belongs to your account only. Passwords are hashed with Argon2.',
+    text: 'Your data belongs to your account only. Passwords are hashed with Argon2, and the AI analysis runs on this server.',
   },
 ]
-
-const ROADMAP = [{ icon: Sparkles, title: 'AI career assistant for job matching and interview prep' }]
 
 export function Landing() {
   const { user } = useAuth()
@@ -137,26 +140,15 @@ export function Landing() {
             ))}
           </div>
         </section>
-
-        <section className="mx-auto max-w-6xl px-4 pb-20 sm:px-6" aria-labelledby="roadmap">
-          <div className="rounded-2xl bg-slate-50 p-8 ring-1 ring-slate-200">
-            <h2 id="roadmap" className="text-lg font-semibold text-slate-900">
-              Coming next
-            </h2>
-            <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-              {ROADMAP.map(({ icon: Icon, title }) => (
-                <li key={title} className="flex items-center gap-3 text-sm text-slate-700">
-                  <Icon className="size-5 text-slate-400" aria-hidden />
-                  {title}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
       </main>
 
       <footer className="border-t border-slate-200 py-8 text-center text-sm text-slate-500">
-        CareerOps — a portfolio project built with FastAPI, PostgreSQL and React.
+        <p>CareerOps — a portfolio project built with FastAPI, PostgreSQL and React.</p>
+        <p className="mt-2">
+          <Link to="/privacy" className="underline underline-offset-2 hover:text-slate-700">
+            Privacy notice
+          </Link>
+        </p>
       </footer>
     </div>
   )

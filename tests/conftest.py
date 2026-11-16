@@ -63,6 +63,17 @@ def throwaway_schema(name: str) -> Iterator[Engine]:
         admin_engine.dispose()
 
 
+@pytest.fixture(autouse=True)
+def _reset_rate_limits() -> None:
+    """Auth rate limiters are module-level state outside any database transaction, and
+    every TestClient shares the same default IP ("testclient"), so without this reset
+    attempts would accumulate across unrelated tests in the same run."""
+    from app.api.rate_limit import ALL_LIMITERS
+
+    for limiter in ALL_LIMITERS:
+        limiter.reset()
+
+
 @pytest.fixture(scope="session")
 def engine() -> Iterator[Engine]:
     with throwaway_schema(TEST_SCHEMA) as test_engine:
@@ -104,8 +115,8 @@ def make_client(db_session: Session) -> Iterator[Callable[[User | None], TestCli
     app.dependency_overrides[get_db] = lambda: db_session
     clients: list[TestClient] = []
 
-    def _make(user: User | None = None) -> TestClient:
-        test_client = TestClient(app)
+    def _make(user: User | None = None, *, ip: str | None = None) -> TestClient:
+        test_client = TestClient(app, client=(ip, 1) if ip else ("testclient", 50000))
         test_client.__enter__()
         clients.append(test_client)
         if user is not None:

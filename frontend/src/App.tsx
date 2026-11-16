@@ -6,6 +6,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import { FullPageSpinner } from '@/components/ui/Spinner'
 import { Landing } from '@/pages/Landing'
 import { NotFound } from '@/pages/NotFound'
+import { Privacy } from '@/pages/Privacy'
 
 // Each area is loaded only when first visited, keeping the initial download small.
 const AppLayout = lazy(() => import('@/layouts/AppLayout').then((m) => ({ default: m.AppLayout })))
@@ -38,6 +39,7 @@ export function App() {
       <Suspense fallback={<FullPageSpinner label="Loading" />}>
         <Routes>
           <Route path="/" element={<Landing />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route element={<RedirectIfAuthenticated />}>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />

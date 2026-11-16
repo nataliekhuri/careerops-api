@@ -1,11 +1,13 @@
 # Render Blueprint: https://render.com/docs/blueprint-spec
 #
-# Creates a free Docker web service and a free PostgreSQL database.
-# No secrets are stored here: Render generates the database password and passes
-# the connection string to the app as DATABASE_URL.
+# Creates a free Docker web service (the API), a free static site (the frontend) and a
+# free PostgreSQL database. No secrets are stored here: Render generates the database
+# password and passes the connection string to the app as DATABASE_URL.
 #
-# Free-plan notes (see README "Deployment"): the web service sleeps after 15 minutes
-# without traffic, and the free database EXPIRES 30 days after creation.
+# Free-plan notes (see README "Deployment"): the API service sleeps after 15 minutes
+# without traffic (the static site does not), and the free database EXPIRES 30 days
+# after creation. This file is reviewed but NOT applied: syncing it in the Render
+# Dashboard is a separate, explicit step (see docs/LAUNCH_PLAN.md).
 
 services:
   - type: web
@@ -36,6 +38,55 @@ services:
       # Render's proxy sets X-Forwarded-* headers; trust them for correct client info.
       - key: FORWARDED_ALLOW_IPS
         value: "*"
+      # Only the deployed frontend origin may call the API from a browser. Update this
+      # if the static site's name (below) ever changes, since Render assigns URLs as
+      # https://<name>.onrender.com.
+      - key: CORS_ORIGINS
+        value: https://careerops-web.onrender.com
+
+  - type: web
+    name: careerops-web
+    runtime: static
+    plan: free
+    region: frankfurt
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    branch: main
+    autoDeployTrigger: checksPass
+    pullRequestPreviewsEnabled: false
+    envVars:
+      # The live API. Must match careerops-api's URL above.
+      - key: VITE_API_URL
+        value: https://careerops-api.onrender.com
+    routes:
+      # Single-page app: let the router handle every path client-side.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: Content-Security-Policy
+        value: >-
+          default-src 'self'; connect-src 'self' https://careerops-api.onrender.com;
+          img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'self';
+          frame-ancestors 'none'; base-uri 'self'; form-action 'self';
+          upgrade-insecure-requests
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: camera=(), microphone=(), geolocation=(), payment=()
 
 databases:
   - name: careerops-db

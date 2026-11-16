@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.errors import register_error_handlers
 from app.api.routes import ai, applications, auth, companies, dashboard, health, interviews
 from app.core.config import get_settings
+from app.core.security_headers import SecurityHeadersMiddleware
 
 # The database schema is managed by Alembic migrations: run `alembic upgrade head`.
 
@@ -24,9 +25,11 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="CareerOps API",
     description="Track job applications. Register, log in, then use the bearer token on every request.",
-    version="2.2.0",
+    version="2.3.0",
     lifespan=lifespan,
 )
+
+app.add_middleware(SecurityHeadersMiddleware)
 
 settings = get_settings()
 if settings.cors_origin_list:
