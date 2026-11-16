@@ -38,11 +38,12 @@ services:
       # Render's proxy sets X-Forwarded-* headers; trust them for correct client info.
       - key: FORWARDED_ALLOW_IPS
         value: "*"
-      # Only the deployed frontend origin may call the API from a browser. Update this
-      # if the static site's name (below) ever changes, since Render assigns URLs as
-      # https://<name>.onrender.com.
+      # Only the deployed frontend origin may call the API from a browser. Render
+      # appended a suffix to the requested name ("-ptuv") because the plain name was
+      # already taken, so the live URL is not the bare https://careerops-web.onrender.com
+      # one might expect. Update this if the static site's actual assigned URL changes.
       - key: CORS_ORIGINS
-        value: https://careerops-web.onrender.com
+        value: https://careerops-web-ptuv.onrender.com
 
   - type: web
     name: careerops-web

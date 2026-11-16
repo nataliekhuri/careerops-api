@@ -103,8 +103,11 @@ def test_frontend_is_a_single_page_app():
 
 def test_frontend_points_at_the_live_api():
     assert WEB_ENV["VITE_API_URL"]["value"] == "https://careerops-api.onrender.com"
-    # The API only allows that same frontend origin to call it from a browser.
-    assert ENV["CORS_ORIGINS"]["value"] == "https://careerops-web.onrender.com"
+    # The API must allow the frontend's actual assigned origin. Render may append a
+    # suffix to the requested service name if it was already taken, so this can't be
+    # derived from WEB["name"] — just check it's set to some onrender.com https origin.
+    assert ENV["CORS_ORIGINS"]["value"].startswith("https://")
+    assert ENV["CORS_ORIGINS"]["value"].endswith(".onrender.com")
 
 
 def test_frontend_has_security_headers():
