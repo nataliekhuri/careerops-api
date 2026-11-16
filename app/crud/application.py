@@ -28,6 +28,8 @@ def _filtered(query: Select, user_id: int, filters: ApplicationFilters) -> Selec
         query = query.where(Application.company.icontains(filters.company, autoescape=True))
     if filters.location:
         query = query.where(Application.location.icontains(filters.location, autoescape=True))
+    if filters.company_id is not None:
+        query = query.where(Application.company_id == filters.company_id)
     return query
 
 

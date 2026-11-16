@@ -162,3 +162,63 @@ def test_users_migration_downgrade_keeps_application_rows():
         assert _revision(conn) == WORKFLOW
         assert "users" not in inspect(conn).get_table_names()
         assert conn.execute(text("SELECT count(*) FROM applications")).scalar() == 1
+
+
+# --------------------------------------------- companies/interviews migration (e1ea5f0b4a8d)
+
+COMPANIES = "e1ea5f0b4a8d"
+
+
+def _user_with_application(conn) -> tuple[int, int]:
+    user_id = conn.execute(
+        text("INSERT INTO users (email, hashed_password) VALUES ('m2@example.com', 'x') RETURNING id")
+    ).scalar()
+    app_id = conn.execute(
+        text(
+            "INSERT INTO applications (user_id, company, position, location, notes, status) "
+            "VALUES (:u, 'Acme', 'Dev', 'Remote', 'keep me', 'Interview') RETURNING id"
+        ),
+        {"u": user_id},
+    ).scalar()
+    conn.commit()
+    return user_id, app_id
+
+
+def test_companies_migration_keeps_existing_applications_unchanged():
+    with throwaway_schema("test_careerops_mig_m2") as engine, engine.connect() as conn:
+        migrations.upgrade(conn, USERS)
+        conn.commit()
+        _, app_id = _user_with_application(conn)
+
+        migrations.upgrade(conn, COMPANIES)
+        conn.commit()
+
+        row = conn.execute(
+            text("SELECT company, notes, status, company_id FROM applications WHERE id = :i"), {"i": app_id}
+        ).one()
+        assert tuple(row) == ("Acme", "keep me", "Interview", None)
+        assert {"companies", "interviews"} <= set(inspect(conn).get_table_names())
+
+
+def test_companies_migration_downgrade_keeps_applications():
+    with throwaway_schema("test_careerops_mig_m2_down") as engine, engine.connect() as conn:
+        migrations.upgrade(conn, COMPANIES)
+        conn.commit()
+        user_id, app_id = _user_with_application(conn)
+        company_id = conn.execute(
+            text("INSERT INTO companies (user_id, name) VALUES (:u, 'Acme') RETURNING id"), {"u": user_id}
+        ).scalar()
+        conn.execute(text("UPDATE applications SET company_id = :c"), {"c": company_id})
+        conn.execute(
+            text("INSERT INTO interviews (user_id, application_id, scheduled_at) VALUES (:u, :a, now())"),
+            {"u": user_id, "a": app_id},
+        )
+        conn.commit()
+
+        migrations.downgrade(conn, USERS)
+        conn.commit()
+
+        assert _revision(conn) == USERS
+        tables = set(inspect(conn).get_table_names())
+        assert "companies" not in tables and "interviews" not in tables
+        assert conn.execute(text("SELECT notes FROM applications")).scalars().all() == ["keep me"]

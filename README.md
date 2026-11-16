@@ -31,7 +31,7 @@ app/
 ├── db/
 │   ├── base.py              # SQLAlchemy base class
 │   └── session.py           # database engine and per-request session
-├── models/                  # "users" and "applications" tables
+├── models/                  # users, applications, companies, interviews
 ├── schemas/                 # request/response models and validation rules
 ├── crud/                    # database read/write functions (always scoped to the owner)
 └── api/
@@ -40,6 +40,9 @@ app/
     └── routes/
         ├── health.py        # /, /health (liveness), /health/ready (readiness)
         ├── auth.py          # /auth/register, /auth/login, /users/me
+        ├── companies.py     # /companies
+        ├── interviews.py    # /interviews
+        ├── dashboard.py     # /dashboard/stats
         └── applications.py  # /applications CRUD endpoints
 alembic/
 ├── env.py                   # migration environment (app settings + migration lock)
@@ -48,6 +51,9 @@ tests/
 ├── conftest.py              # fixtures: isolated test schema, rollback per test
 ├── test_auth.py             # registration, login, tokens, profile, account deletion
 ├── test_isolation.py        # users can never see or change each other's data
+├── test_companies.py        # companies, application links, isolation
+├── test_interviews.py       # interviews, calendar filters, cascade, DB-level ownership
+├── test_dashboard.py        # exact statistics, weekly buckets, isolation
 ├── test_applications.py     # CRUD, validation and error-handling tests
 ├── test_application_workflow.py  # statuses, timestamps, PATCH, filters, pagination
 ├── test_health.py
@@ -140,6 +146,53 @@ curl -X PATCH http://127.0.0.1:8000/applications/1 \
   -d '{"status": "Interview"}'
 ```
 
+### Companies
+
+| Method   | Endpoint             | Description |
+|----------|----------------------|-------------|
+| `POST`   | `/companies`         | Save a company (`name` required; `website`, `industry`, `location`, `notes`) |
+| `GET`    | `/companies`         | List with `q` (search name/industry/location), `sort` (`name`, `created_at`, `-` for descending), `limit`, `offset`; total in `X-Total-Count` |
+| `GET`    | `/companies/{id}`    | One company, including `application_count` |
+| `PATCH`  | `/companies/{id}`    | Update the fields sent |
+| `DELETE` | `/companies/{id}`    | Delete it; linked applications are kept and unlinked |
+
+Company names are unique per user (case-insensitive, **409** on duplicates). Websites must
+start with `http://` or `https://`. Applications can link to a company with the optional
+`company_id` field (and be filtered by it); the existing `company` text stays as before.
+
+### Interviews
+
+| Method   | Endpoint              | Description |
+|----------|-----------------------|-------------|
+| `POST`   | `/interviews`         | Schedule an interview for one of your applications |
+| `GET`    | `/interviews`         | Soonest first; filter by `application_id`, `start`/`end` (calendar range), `outcome`, `interview_type`; `descending`, `limit` (≤ 500), `offset` |
+| `GET`    | `/interviews/{id}`    | One interview, with a summary of its application |
+| `PATCH`  | `/interviews/{id}`    | Reschedule, record the outcome, edit details |
+| `DELETE` | `/interviews/{id}`    | Delete it |
+
+```json
+{
+  "application_id": 1,
+  "scheduled_at": "2026-12-01T14:00:00+01:00",
+  "duration_minutes": 45,
+  "interview_type": "video",
+  "location": "https://meet.example/abc",
+  "interviewer": "Jane Doe, Engineering Manager"
+}
+```
+
+`scheduled_at` must include a time zone. Types: `phone`, `video`, `onsite`, `technical`,
+`behavioral`, `other`. Outcomes: `pending`, `passed`, `failed`, `cancelled`. Deleting an
+application deletes its interviews.
+
+### Dashboard
+
+`GET /dashboard/stats` returns, for the signed-in user only: total and active applications,
+counts per status, response / interview / offer rates (percent of non-withdrawn
+applications), applications per week for the last 12 weeks (Monday-based, UTC,
+zero-filled), top 5 companies, company and interview totals, and the next 5 pending
+interviews.
+
 ## Data Model
 
 Each job application has the following fields:
@@ -152,11 +205,18 @@ Each job application has the following fields:
 | `location`   | string   | Yes      | —           | 1–255 characters |
 | `status`     | string   | No       | `"Applied"` | One of the statuses below (case-insensitive) |
 | `notes`      | string   | No       | `""`        | up to 5000 characters |
+| `company_id` | int/null | No       | `null`      | One of **your** companies; `null` unlinks |
 | `created_at` | datetime | —        | Set by the server | Read-only, ISO 8601 with time zone |
 | `updated_at` | datetime | —        | Set by the server | Read-only; changes whenever a value changes |
 
 **Statuses:** `Applied`, `Screening`, `Interview`, `Offer`, `Rejected`, `Withdrawn`.
 They are enforced by both the API and a database `CHECK` constraint.
+
+**Data isolation:** applications, companies and interviews all belong to one user. Every
+query is filtered by the signed-in user; other users' records answer **404**, and
+references to them (`company_id`, `application_id`) answer **422 "not found"**, exactly like
+ids that don't exist. In the database, an interview's owner must match its application's
+owner (composite foreign key), so even a bug in the API could not cross users.
 
 Surrounding whitespace is trimmed, blank values and `null`s are rejected, and unknown
 fields are not allowed. Invalid input returns **422 Unprocessable Entity** with details
@@ -369,6 +429,9 @@ This project is in early development.
 - [x] Request validation with Pydantic (length limits, blank and unknown fields rejected)
 - [x] Application status workflow, enforced in the API and the database
 - [x] `created_at` / `updated_at` timestamps
+- [x] Companies (per user) linked to applications
+- [x] Interviews with calendar-range filtering and outcomes
+- [x] Dashboard statistics endpoint
 - [x] Filtering, sorting and pagination
 - [x] Liveness and readiness health checks
 - [x] Safe error responses (no internal details leaked) and database connection timeout
@@ -383,7 +446,6 @@ This project is in early development.
 **Planned (not yet implemented)**
 
 - [x] Deployment configuration for Render (Docker, managed PostgreSQL, migrations on start)
-- [ ] Companies, interviews and dashboard statistics
 - [ ] React + TypeScript frontend
 - [ ] AI career assistant
 
