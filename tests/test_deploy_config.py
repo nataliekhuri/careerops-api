@@ -124,5 +124,3 @@ def test_long_lived_cache_only_applies_to_hashed_assets():
 
     assert all(h["path"] == "/assets/*" for h in cache_rules)
     assert all("immutable" in h["value"] for h in cache_rules)
-
-
