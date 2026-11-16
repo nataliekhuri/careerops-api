@@ -1,7 +1,7 @@
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 
-import type { Application, Company, User } from '@/api/types'
+import type { Application, Company, DashboardStats, Interview, User } from '@/api/types'
 
 export const API = 'http://localhost/api'
 
@@ -51,11 +51,50 @@ export function makeCompany(overrides: Partial<Company> = {}): Company {
   }
 }
 
+export function emptyStats(overrides: Partial<DashboardStats> = {}): DashboardStats {
+  return {
+    total_applications: 0,
+    active_applications: 0,
+    by_status: { Applied: 0, Screening: 0, Interview: 0, Offer: 0, Rejected: 0, Withdrawn: 0 },
+    rates: { response_rate: 0, interview_rate: 0, offer_rate: 0 },
+    applications_per_week: Array.from({ length: 12 }, (_, i) => ({
+      week_start: new Date(Date.UTC(2026, 7, 24 + i * 7)).toISOString().slice(0, 10),
+      count: 0,
+    })),
+    top_companies: [],
+    total_companies: 0,
+    total_interviews: 0,
+    upcoming_interviews_count: 0,
+    upcoming_interviews: [],
+    ...overrides,
+  }
+}
+
+export function makeInterview(overrides: Partial<Interview> = {}): Interview {
+  return {
+    id: 1,
+    application_id: 1,
+    application: { id: 1, company: 'Acme Corp', position: 'Backend Developer', status: 'Interview' },
+    scheduled_at: '2026-11-20T09:00:00Z',
+    duration_minutes: 60,
+    interview_type: 'video',
+    location: 'https://meet.example/abc',
+    interviewer: 'Jane Doe',
+    notes: '',
+    outcome: 'pending',
+    created_at: '2026-11-01T10:00:00Z',
+    updated_at: '2026-11-01T10:00:00Z',
+    ...overrides,
+  }
+}
+
 /** Handlers for a signed-in user with the given data. */
 export function signedIn({
   applications = [] as Application[],
   companies = [] as Company[],
-}: { applications?: Application[]; companies?: Company[] } = {}) {
+  interviews = [] as Interview[],
+  stats = emptyStats(),
+}: { applications?: Application[]; companies?: Company[]; interviews?: Interview[]; stats?: DashboardStats } = {}) {
   localStorage.setItem('careerops.token', fakeToken())
   server.use(
     http.get(`${API}/users/me`, () => HttpResponse.json(user)),
@@ -65,5 +104,9 @@ export function signedIn({
     http.get(`${API}/companies`, () =>
       HttpResponse.json(companies, { headers: { 'X-Total-Count': String(companies.length) } }),
     ),
+    http.get(`${API}/interviews`, () =>
+      HttpResponse.json(interviews, { headers: { 'X-Total-Count': String(interviews.length) } }),
+    ),
+    http.get(`${API}/dashboard/stats`, () => HttpResponse.json(stats)),
   )
 }

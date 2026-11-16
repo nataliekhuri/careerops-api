@@ -1,20 +1,29 @@
-import { ArrowLeft, Building2, Pencil, Trash2 } from 'lucide-react'
+import { ArrowLeft, Building2, CalendarPlus, Pencil, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { toast } from 'sonner'
 
 import { ApiError } from '@/api/client'
-import { useApplication, useCreateApplication, useDeleteApplication, useUpdateApplication } from '@/api/hooks'
+import {
+  useApplication,
+  useCreateApplication,
+  useCreateInterview,
+  useDeleteApplication,
+  useInterviews,
+  useUpdateApplication,
+} from '@/api/hooks'
 import { APPLICATION_STATUSES, type ApplicationStatus } from '@/api/types'
 import { ErrorMessage } from '@/components/ErrorMessage'
 import { errorText } from '@/lib/errors'
 import { StatusBadge } from '@/components/StatusBadge'
 import { Button } from '@/components/ui/Button'
 import { Card, PageHeader } from '@/components/ui/Card'
-import { ConfirmDialog } from '@/components/ui/Dialogs'
+import { ConfirmDialog, Modal } from '@/components/ui/Dialogs'
 import { Select } from '@/components/ui/Field'
-import { FullPageSpinner } from '@/components/ui/Spinner'
+import { FullPageSpinner, Spinner } from '@/components/ui/Spinner'
 import { formatDateTime } from '@/lib/format'
+import { InterviewForm } from '@/pages/interviews/InterviewForm'
+import { label as interviewLabel } from '@/pages/interviews/labels'
 import { NotFound } from '@/pages/NotFound'
 
 import { ApplicationForm } from './ApplicationForm'
@@ -180,6 +189,8 @@ export function ApplicationDetailPage() {
         </div>
       )}
 
+      {!editing && <ApplicationInterviews applicationId={application.id} />}
+
       <ConfirmDialog
         open={confirmDelete}
         onOpenChange={setConfirmDelete}
@@ -190,5 +201,63 @@ export function ApplicationDetailPage() {
         onConfirm={deleteApplication}
       />
     </>
+  )
+}
+
+function ApplicationInterviews({ applicationId }: { applicationId: number }) {
+  const { data, error, isPending } = useInterviews({ application_id: applicationId, limit: 100 })
+  const create = useCreateInterview()
+  // The default date is captured when the dialog opens, not on every render.
+  const [scheduling, setScheduling] = useState<Date | null>(null)
+
+  return (
+    <Card className="mt-6">
+      <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4">
+        <h2 className="text-sm font-semibold text-slate-900">Interviews</h2>
+        <Button size="sm" variant="secondary" onClick={() => setScheduling(new Date())}>
+          <CalendarPlus className="size-4" aria-hidden /> Schedule interview
+        </Button>
+      </div>
+      {error ? (
+        <div className="p-4">
+          <ErrorMessage error={error} />
+        </div>
+      ) : isPending ? (
+        <div className="flex justify-center p-6 text-brand-600">
+          <Spinner label="Loading interviews" />
+        </div>
+      ) : data.items.length === 0 ? (
+        <p className="px-6 py-6 text-sm text-slate-500">No interviews scheduled for this application yet.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100">
+          {data.items.map((interview) => (
+            <li key={interview.id} className="flex items-center justify-between gap-4 px-6 py-3 text-sm">
+              <span>
+                <span className="font-medium text-slate-900">{formatDateTime(interview.scheduled_at)}</span>
+                <span className="text-slate-500"> · {interviewLabel(interview.interview_type)}</span>
+              </span>
+              <span className="text-xs text-slate-500">{interviewLabel(interview.outcome)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <Modal
+        open={scheduling !== null}
+        onOpenChange={(open) => !open && setScheduling(null)}
+        title="Schedule interview"
+      >
+        <InterviewForm
+          defaultApplicationId={applicationId}
+          defaultDate={scheduling ?? undefined}
+          submitLabel="Schedule interview"
+          onCancel={() => setScheduling(null)}
+          onCreate={async (input) => {
+            await create.mutateAsync(input)
+            toast.success('Interview scheduled')
+            setScheduling(null)
+          }}
+        />
+      </Modal>
+    </Card>
   )
 }

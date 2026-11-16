@@ -1,8 +1,19 @@
 import * as Dialog from '@radix-ui/react-dialog'
 import * as Menu from '@radix-ui/react-dropdown-menu'
-import { Building2, ChevronDown, ClipboardList, LogOut, Menu as MenuIcon, X } from 'lucide-react'
+import {
+  Building2,
+  CalendarDays,
+  ChevronDown,
+  ClipboardList,
+  KanbanSquare,
+  LayoutDashboard,
+  LogOut,
+  Menu as MenuIcon,
+  Settings,
+  X,
+} from 'lucide-react'
 import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router'
+import { Link, NavLink, Outlet } from 'react-router'
 import { toast } from 'sonner'
 
 import { useAuth } from '@/auth/context'
@@ -10,8 +21,12 @@ import { Logo } from '@/components/Logo'
 import { cn } from '@/lib/cn'
 
 const NAV = [
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/applications', label: 'Applications', icon: ClipboardList },
+  { to: '/board', label: 'Board', icon: KanbanSquare },
+  { to: '/interviews', label: 'Interviews', icon: CalendarDays },
   { to: '/companies', label: 'Companies', icon: Building2 },
+  { to: '/settings', label: 'Settings', icon: Settings },
 ]
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
@@ -40,7 +55,6 @@ function NavItems({ onNavigate }: { onNavigate?: () => void }) {
 
 function UserMenu() {
   const { user, logout } = useAuth()
-  const navigate = useNavigate()
   if (!user) return null
   const name = user.full_name || user.email
   const initials = name
@@ -72,11 +86,18 @@ function UserMenu() {
           sideOffset={8}
           className="z-50 min-w-56 rounded-lg bg-white p-1 shadow-lg ring-1 ring-slate-200"
         >
+          <Menu.Item asChild>
+            <Link
+              to="/settings"
+              className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 outline-none data-[highlighted]:bg-slate-100"
+            >
+              <Settings className="size-4" aria-hidden /> Settings
+            </Link>
+          </Menu.Item>
           <Menu.Item
             onSelect={() => {
-              logout()
+              logout('/login')
               toast.success('You have been signed out')
-              navigate('/login')
             }}
             className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm text-slate-700 outline-none data-[highlighted]:bg-slate-100"
           >
@@ -103,7 +124,7 @@ export function AppLayout() {
       {/* Desktop sidebar */}
       <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-slate-200 bg-white lg:flex">
         <div className="flex h-16 items-center px-6">
-          <Logo to="/applications" />
+          <Logo to="/dashboard" />
         </div>
         <nav aria-label="Main" className="flex-1 px-4 py-4">
           <NavItems />
@@ -123,7 +144,7 @@ export function AppLayout() {
             <Dialog.Overlay className="fixed inset-0 z-40 bg-slate-900/40" />
             <Dialog.Content className="fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-white shadow-xl">
               <div className="flex h-16 items-center justify-between px-4">
-                <Logo to="/applications" />
+                <Logo to="/dashboard" />
                 <Dialog.Close className="rounded-md p-2 text-slate-500 hover:bg-slate-100" aria-label="Close menu">
                   <X className="size-5" aria-hidden />
                 </Dialog.Close>
@@ -139,7 +160,7 @@ export function AppLayout() {
             </Dialog.Content>
           </Dialog.Portal>
         </Dialog.Root>
-        <Logo to="/applications" />
+        <Logo to="/dashboard" />
       </header>
 
       <main id="main" className="lg:pl-64">

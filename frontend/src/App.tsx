@@ -21,6 +21,12 @@ const NewApplicationPage = lazy(() =>
   import('@/pages/applications/ApplicationDetailPage').then((m) => ({ default: m.NewApplicationPage })),
 )
 const CompaniesPage = lazy(() => import('@/pages/companies/CompaniesPage').then((m) => ({ default: m.CompaniesPage })))
+const DashboardPage = lazy(() => import('@/pages/dashboard/DashboardPage').then((m) => ({ default: m.DashboardPage })))
+const BoardPage = lazy(() => import('@/pages/board/BoardPage').then((m) => ({ default: m.BoardPage })))
+const InterviewsPage = lazy(() =>
+  import('@/pages/interviews/InterviewsPage').then((m) => ({ default: m.InterviewsPage })),
+)
+const SettingsPage = lazy(() => import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })))
 const CompanyDetailPage = lazy(() =>
   import('@/pages/companies/CompanyDetailPage').then((m) => ({ default: m.CompanyDetailPage })),
 )
@@ -37,6 +43,10 @@ export function App() {
           </Route>
           <Route element={<RequireAuth />}>
             <Route element={<AppLayout />}>
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/board" element={<BoardPage />} />
+              <Route path="/interviews" element={<InterviewsPage />} />
+              <Route path="/settings" element={<SettingsPage />} />
               <Route path="/applications" element={<ApplicationsPage />} />
               <Route path="/applications/new" element={<NewApplicationPage />} />
               <Route path="/applications/:id" element={<ApplicationDetailPage />} />

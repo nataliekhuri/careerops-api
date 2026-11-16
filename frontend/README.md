@@ -25,3 +25,10 @@ python ../scripts/export_openapi.py && npm run gen:api
 
 Configuration: `VITE_API_URL` (see `.env.example`). In development it defaults to `/api`,
 which Vite proxies to the backend.
+
+## Demo screenshots
+
+`../docs/screenshots/` holds screenshots of a local demo account (fake data in a
+throwaway database schema), captured with headless Edge at 2x:
+landing, dashboard, board (including a drag in progress), interview calendar,
+applications, application detail, companies, settings and mobile views.

@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { type ReactNode, useCallback, useEffect, useMemo, useSyncExternalStore } from 'react'
+import { type ReactNode, useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
 
 import { api, unwrap } from '@/api/client'
 import { keys } from '@/api/hooks'
@@ -11,6 +11,7 @@ import { clearToken, getToken, onTokenChange, setToken } from './token'
 export function AuthProvider({ children }: { children: ReactNode }) {
   const queryClient = useQueryClient()
   const token = useSyncExternalStore(onTokenChange, getToken, () => null)
+  const [signedOutTo, setSignedOutTo] = useState<string | null>(null)
 
   const me = useQuery({
     queryKey: keys.me,
@@ -35,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }),
       )
       queryClient.clear()
+      setSignedOutTo(null)
       setToken(data.access_token)
     },
     [queryClient],
@@ -48,7 +50,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     [login],
   )
 
-  const logout = useCallback(() => clearToken(), [])
+  const logout = useCallback((to?: string) => {
+    setSignedOutTo(to ?? null)
+    clearToken()
+  }, [])
 
   const value = useMemo<AuthState>(
     () => ({
@@ -57,8 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       login,
       register,
       logout,
+      signedOutTo,
     }),
-    [token, me.data, me.isPending, login, register, logout],
+    [token, me.data, me.isPending, login, register, logout, signedOutTo],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

@@ -1,4 +1,4 @@
-import { Building2, ClipboardList, LayoutDashboard, Lock, Search, Sparkles } from 'lucide-react'
+import { Building2, CalendarDays, ClipboardList, LayoutDashboard, Lock, Search, Sparkles } from 'lucide-react'
 import { Link } from 'react-router'
 
 import { useAuth } from '@/auth/context'
@@ -23,16 +23,23 @@ const FEATURES = [
     text: 'Keep notes on the companies you target and see every application to each one.',
   },
   {
+    icon: LayoutDashboard,
+    title: 'Dashboard and Kanban board',
+    text: 'See response rates and weekly activity, and drag applications through your pipeline.',
+  },
+  {
+    icon: CalendarDays,
+    title: 'Interview calendar',
+    text: 'Schedule interviews, keep meeting links and notes, and record outcomes.',
+  },
+  {
     icon: Lock,
     title: 'Private by design',
     text: 'Your data belongs to your account only. Passwords are hashed with Argon2.',
   },
 ]
 
-const ROADMAP = [
-  { icon: LayoutDashboard, title: 'Dashboard, Kanban board and interview calendar' },
-  { icon: Sparkles, title: 'AI career assistant for job matching and interview prep' },
-]
+const ROADMAP = [{ icon: Sparkles, title: 'AI career assistant for job matching and interview prep' }]
 
 export function Landing() {
   const { user } = useAuth()
@@ -43,7 +50,7 @@ export function Landing() {
         <Logo />
         <nav aria-label="Account" className="flex items-center gap-2">
           {user ? (
-            <Link to="/applications" className={buttonClasses('primary')}>
+            <Link to="/dashboard" className={buttonClasses('primary')}>
               Open CareerOps
             </Link>
           ) : (
@@ -78,8 +85,8 @@ export function Landing() {
                 to follow up on next.
               </p>
               <div className="mt-8 flex flex-wrap gap-3">
-                <Link to={user ? '/applications' : '/register'} className={buttonClasses('primary', 'lg')}>
-                  {user ? 'Go to your applications' : 'Create a free account'}
+                <Link to={user ? '/dashboard' : '/register'} className={buttonClasses('primary', 'lg')}>
+                  {user ? 'Go to your dashboard' : 'Create a free account'}
                 </Link>
                 {!user && (
                   <Link to="/login" className={buttonClasses('secondary', 'lg')}>
@@ -120,7 +127,7 @@ export function Landing() {
           <h2 id="features" className="text-2xl font-semibold tracking-tight text-slate-900">
             What you can do today
           </h2>
-          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {FEATURES.map(({ icon: Icon, title, text }) => (
               <div key={title} className="rounded-xl p-6 ring-1 ring-slate-200">
                 <Icon className="size-6 text-brand-600" aria-hidden />

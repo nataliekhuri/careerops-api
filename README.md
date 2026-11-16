@@ -7,6 +7,10 @@ A full-stack app for tracking job applications: a **FastAPI + PostgreSQL** backe
 
 Data is stored in **PostgreSQL**, so applications persist across server restarts.
 
+![CareerOps dashboard](docs/screenshots/02-dashboard.png)
+
+More screens (board, interview calendar, mobile) are in [`docs/screenshots/`](docs/screenshots/).
+
 ## Tech Stack
 
 - [FastAPI](https://fastapi.tiangolo.com/) — web framework
@@ -253,6 +257,10 @@ A React single-page app in [`frontend/`](frontend/) that uses the real API.
 | Auth | Register and sign in (same validation rules as the API); expired or rejected sessions sign you out |
 | Applications | Table with search, status filter, sorting and pagination (kept in the URL); create, view, edit, quick status change, delete with confirmation; link to a saved company |
 | Companies | Card list with search, sorting and pagination; create, edit, delete; each company shows its linked applications |
+| Dashboard | Key figures and rates, applications-per-week chart (with a text alternative), pipeline by status linking to the filtered list, upcoming interviews, top companies — all from `GET /dashboard/stats` |
+| Board | Kanban columns per status; drag a card (mouse, touch or keyboard: Space, ←/→, Space) or use “Move to” — the status is saved through the API, optimistically, and rolled back with a message if the request fails |
+| Interviews | Month calendar of real interviews (only the visible weeks are requested), day list with join links, schedule / edit / record outcome / delete; times are entered locally and sent with a time zone |
+| Settings | Edit profile, change password (current password checked by the API), delete account with password + confirmation |
 | Layout | Responsive sidebar / mobile drawer, user menu, skip link, accessible dialogs |
 
 **Stack:** React 19, TypeScript, Vite, Tailwind CSS v4, React Router, TanStack Query,
