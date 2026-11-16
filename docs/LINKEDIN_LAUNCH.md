@@ -2,8 +2,9 @@
 
 Uses the real screenshots already in [`docs/screenshots/`](screenshots/) — all captured
 against a seeded demo account on a throwaway database schema, not production data.
-**Do not post this until the frontend is actually live** (see LAUNCH_PLAN.md); the post
-drafts below assume a working link.
+
+**The frontend is live:** https://careerops-web-ptuv.onrender.com — replace `[link]` in
+the post copy below with that URL, and `[github link]` with the repository URL.
 
 ## Screenshot picks
 
@@ -133,8 +134,8 @@ Recording tips:
 
 ## Checklist before posting
 
-- [ ] Frontend is actually live at the link you're posting (see LAUNCH_PLAN.md go-live checklist)
-- [ ] `scripts/smoke_test.py` passed against production
-- [ ] Register → full flow → delete account, once, manually, as a final human check
+- [x] Frontend is actually live at the link you're posting — https://careerops-web-ptuv.onrender.com
+- [x] Register → full flow → delete account, manually, as a final human check (done during launch verification, with two separate accounts, including the isolation check)
+- [ ] `scripts/smoke_test.py` passed against production (not run in this pass — the manual check above covered the same flows)
 - [ ] Screenshots/video show no leftover test data you don't want public (the ones in `docs/screenshots/` are already clean demo data)
-- [ ] GitHub repo README has the live link at the top
+- [x] GitHub repo README has the live link at the top

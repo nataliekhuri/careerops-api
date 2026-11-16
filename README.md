@@ -2,6 +2,13 @@
 
 [![CI](https://github.com/nataliekhuri/careerops-api/actions/workflows/ci.yml/badge.svg)](https://github.com/nataliekhuri/careerops-api/actions/workflows/ci.yml)
 
+**Live demo:** [careerops-web-ptuv.onrender.com](https://careerops-web-ptuv.onrender.com)
+(API: [careerops-api.onrender.com](https://careerops-api.onrender.com)). Hosted on Render's
+free plan — the API can take about a minute to wake up on the first request after 15
+minutes idle, and the free database is reset periodically (see
+[docs/LAUNCH_PLAN.md](docs/LAUNCH_PLAN.md) and the
+[privacy notice](https://careerops-web-ptuv.onrender.com/privacy)).
+
 A full-stack app for tracking job applications: a **FastAPI + PostgreSQL** backend and a
 **React + TypeScript** frontend.
 
@@ -552,16 +559,15 @@ data is lost).
 
 ## Project Status
 
-**Live in production (API 2.0.0):** user accounts and auth, job application CRUD with
-status workflow, filtering/sorting/pagination, per-user data isolation, health checks,
-PostgreSQL storage, Docker/CI/Render deployment.
-
-**Built and tested locally, waiting for approval to deploy:** companies, interviews and
-the dashboard (PR #8); the full React frontend — landing, auth, applications,
-companies, dashboard, Kanban board, interview calendar, settings (PR #9, #10); the AI
-career assistant and career profile (PR #11); and production hardening — login rate
-limiting, security headers, a privacy notice page, the static-site deployment config,
-and a production smoke-test script (PR #12).
+**Live in production (API 2.3.0):** everything through M6 is deployed and verified —
+user accounts and auth with login/registration rate limiting, job applications with
+status workflow, companies, interviews, the dashboard, job descriptions and the AI
+career assistant (job match scoring, CV review, interview prep), security response
+headers, and the full React frontend at
+[careerops-web-ptuv.onrender.com](https://careerops-web-ptuv.onrender.com) — landing,
+auth, applications, companies, dashboard, Kanban board, interview calendar, settings,
+AI assistant and the [privacy notice](https://careerops-web-ptuv.onrender.com/privacy).
+Both production migrations (PR #8, #11) have been applied and verified.
 
 **Not yet implemented:** a hosted (non-free) AI provider, email verification, a CAPTCHA
 on registration.

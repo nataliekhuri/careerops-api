@@ -16,7 +16,7 @@ migration SQL and backup steps referenced below.
 | 1 | **Database lifetime.** The free Render PostgreSQL database expires **30 days after creation** (created around 12 Nov 2026, so roughly 12 Dec 2026 — check the exact date in the Render dashboard), and is deleted 14 days after that. | a) Stay free: treat the app as a demo and recreate the database when it expires (all data lost). b) Upgrade the database to a paid plan (costs money). | For a portfolio launch, a), with the "demo, data may be reset" notice already on the [privacy page](../frontend/src/pages/Privacy.tsx). Choose b) only if real users should keep data. |
 | 2 | **Public sign-up.** | Open registration, or a demo video only. | Open registration — login/registration rate limiting is built (see below). Do not publish a shared demo password: anyone could change or delete it. |
 | 3 | **Production migrations** `e1ea5f0b4a8d` (#8) and `66ff5fb506ac` (#11). Both are additive and run automatically at container start. | Approve each with a backup. | Approve both, each with a backup (option A or B — see MIGRATION_AND_BACKUP_PLAN.md). |
-| 4 | **Frontend URL.** | `careerops-web.onrender.com` (free), or a custom domain (costs money). | The free `onrender.com` URL — already what `render.yaml` and `CORS_ORIGINS` are configured for. |
+| 4 | **Frontend URL.** | A free `onrender.com` URL, or a custom domain (costs money). | The free URL. Render assigned `careerops-web-ptuv.onrender.com` (the plain `careerops-web.onrender.com` name was already taken); `render.yaml` and `CORS_ORIGINS` are configured for the actual assigned URL. |
 
 ## 2. Merge and migration order
 
@@ -43,18 +43,16 @@ the backup taken just before.
 - Request size limits were already in place (job descriptions 20,000 characters, CVs 30,000).
 - Full write-up: [SECURITY_REVIEW.md](SECURITY_REVIEW.md).
 
-### 3.2 Static site and CORS — configured, not yet synced to Render
+### 3.2 Static site and CORS — live
 
-`render.yaml` now has a second service, `careerops-web` (free static site, builds
-`frontend/`), with a CSP, caching and security headers, and the API service now sets
-`CORS_ORIGINS=https://careerops-web.onrender.com`. Sanity-checked by 7 tests in
-`tests/test_deploy_config.py` (plan is free, builds from `frontend/`, is a single-page
+`render.yaml` has a second service, `careerops-web` (free static site, builds
+`frontend/`), with a CSP, caching and security headers. Render assigned it
+`careerops-web-ptuv.onrender.com` (the plain `careerops-web.onrender.com` name was
+already taken when the Blueprint was synced), so `CORS_ORIGINS` on the API is set to
+that actual assigned URL. Sanity-checked by tests in `tests/test_deploy_config.py`
+(static sites have no `plan`/`region` field, builds from `frontend/`, is a single-page
 app rewrite, points at the live API, has every security header, long cache only on
-hashed assets, same region as the API).
-
-**This file being in Git does not create the service.** Applying it is a separate step:
-in the Render Dashboard, open the Blueprint and sync, which then creates
-`careerops-web` for the first time.
+hashed assets).
 
 ### 3.3 Privacy notice page — done, tested
 
@@ -75,7 +73,7 @@ confirms it is really gone. Exits non-zero on any failure.
 ```bash
 python scripts/smoke_test.py --api-url https://careerops-api.onrender.com
 python scripts/smoke_test.py --api-url https://careerops-api.onrender.com \
-    --web-url https://careerops-web.onrender.com
+    --web-url https://careerops-web-ptuv.onrender.com
 ```
 
 Dry-run verified against a local instance on a throwaway database schema (24 checks,
@@ -94,16 +92,23 @@ action against production and needs the same go-ahead as any other production st
 
 ## 4. Go-live checklist
 
-- [ ] Decisions 1–4 made
-- [ ] Backup taken, then #8 merged; production migration `e1ea5f0b4a8d` approved and succeeded
-- [ ] #9, #10 merged
-- [ ] Backup taken, then #11 merged; production migration `66ff5fb506ac` approved and succeeded
-- [ ] M6 PR merged
-- [ ] Blueprint synced in the Render Dashboard so `careerops-web` is created
-- [ ] `scripts/smoke_test.py` run against the live API (and `--web-url` once the static site is live) and passed
-- [ ] Response headers spot-checked in a real browser (CSP, nosniff, HSTS)
+- [x] Decisions 1–4 made
+- [x] Backup taken, then #8 merged; production migration `e1ea5f0b4a8d` approved and succeeded
+- [x] #9, #10 merged
+- [x] Backup taken, then #11 merged; production migration `66ff5fb506ac` approved and succeeded
+- [x] M6 PR merged
+- [x] Blueprint synced in the Render Dashboard — `careerops-web` was created. Render assigned
+      it **`careerops-web-ptuv.onrender.com`** (the plain `careerops-web.onrender.com` name
+      was already taken), so `CORS_ORIGINS` was updated to match after sync.
+- [x] Manual click-through of every major flow against production (register, login,
+      logout, account isolation, applications/companies/interviews CRUD, board, dashboard,
+      all 4 AI assistant tabs, mobile layout) — see the launch verification report.
+      `scripts/smoke_test.py` was written and dry-run verified locally but not run against
+      production in this pass (the manual walkthrough covered the same flows).
+- [x] Response headers spot-checked in a real browser (CSP, nosniff, HSTS) — confirmed on
+      both the API and the static site.
 - [ ] Database expiry date noted in the calendar (if staying on the free plan)
-- [ ] README updated with the live frontend URL
+- [x] README updated with the live frontend URL
 - [ ] LinkedIn post published — see [LINKEDIN_LAUNCH.md](LINKEDIN_LAUNCH.md)
 
 ## 5. After launch
