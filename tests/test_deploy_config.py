@@ -18,8 +18,10 @@ WEB_ENV = {e["key"]: e for e in WEB["envVars"]}
 
 def test_only_free_plans_are_used():
     assert SERVICE["plan"] == "free"
-    assert WEB["plan"] == "free"
     assert DATABASE["plan"] == "free"
+    # Static sites have no compute plan and no region; Render rejects both fields.
+    assert "plan" not in WEB
+    assert "region" not in WEB
 
 
 def test_web_service_builds_from_the_dockerfile():
@@ -124,5 +126,3 @@ def test_long_lived_cache_only_applies_to_hashed_assets():
     assert all("immutable" in h["value"] for h in cache_rules)
 
 
-def test_frontend_and_api_share_a_region():
-    assert WEB["region"] == SERVICE["region"]
